@@ -3,6 +3,22 @@
 import React, { useEffect, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { User } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
+import { UserCheck, UserPlus, Shield, Power } from "lucide-react";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -14,19 +30,30 @@ export default function UsersPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadUsers = async () => {
+  const fetchUsers = async () => {
     try {
       const data = await apiFetch<User[]>("/users");
       setUsers(Array.isArray(data) ? data : []);
     } catch {
       setUsers([]);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadUsers();
+    let mounted = true;
+    void (async () => {
+      try {
+        const data = await apiFetch<User[]>("/users");
+        if (mounted) setUsers(Array.isArray(data) ? data : []);
+      } catch {
+        if (mounted) setUsers([]);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -46,7 +73,7 @@ export default function UsersPage() {
       setFullName("");
       setEmail("");
       setPassword("");
-      await loadUsers();
+      await fetchUsers();
     } catch (err) {
       const apiErr = err as ApiError;
       setError(apiErr.detail || apiErr.title || "Failed to create user");
@@ -70,10 +97,10 @@ export default function UsersPage() {
         method: "PATCH",
         body: JSON.stringify({ status: nextStatus }),
       });
-      await loadUsers();
+      await fetchUsers();
     } catch (err) {
       const apiErr = err as ApiError;
-      alert(apiErr.detail || apiErr.title || "Failed to update user status");
+      alert(apiErr.detail || apiErr.title || "Failed to toggle status");
     }
   };
 
@@ -81,159 +108,166 @@ export default function UsersPage() {
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">User Directory</h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Manage organization members, credentials, and account activation states.
+          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
+            <UserCheck className="w-6 h-6 text-indigo-400" />
+            <span>User Directory</span>
+          </h1>
+          <p className="text-xs text-slate-400 mt-1">
+            Manage organization members, platform roles, and credential lifecycle.
           </p>
         </div>
-        <button
+
+        <Button
           onClick={() => setShowCreateModal(true)}
-          className="px-4 py-2 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
+          className="gap-2"
         >
-          + Add User
-        </button>
+          <UserPlus className="w-4 h-4" />
+          <span>+ Add User</span>
+        </Button>
       </div>
 
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-        {loading ? (
-          <div className="p-8 text-center text-xs text-slate-500">Loading directory...</div>
-        ) : users.length === 0 ? (
-          <div className="p-8 text-center text-xs text-slate-500">No users found.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-slate-800 text-slate-400 bg-slate-900/80">
-                  <th className="py-3.5 px-6 font-semibold">User</th>
-                  <th className="py-3.5 px-6 font-semibold">Email</th>
-                  <th className="py-3.5 px-6 font-semibold">Role Badges</th>
-                  <th className="py-3.5 px-6 font-semibold">Status</th>
-                  <th className="py-3.5 px-6 font-semibold">Created</th>
-                  <th className="py-3.5 px-6 font-semibold text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {users.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="py-4 px-6 font-medium text-white">{u.full_name}</td>
-                    <td className="py-4 px-6 font-mono text-slate-400">{u.email}</td>
-                    <td className="py-4 px-6">
-                      {u.is_super_admin ? (
-                        <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold text-[10px] uppercase">
-                          Super Admin
-                        </span>
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="p-12 text-center text-xs text-slate-500">Loading user directory...</div>
+          ) : users.length === 0 ? (
+            <div className="p-12 text-center text-xs text-slate-500">
+              No users found. Click &quot;+ Add User&quot; to provision developer accounts.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Full Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Account Status</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-semibold text-white">
+                      {user.full_name}
+                    </TableCell>
+                    <TableCell className="font-mono text-slate-300 text-[11px]">
+                      {user.email}
+                    </TableCell>
+                    <TableCell>
+                      {user.is_super_admin ? (
+                        <Badge variant="warning" className="gap-1">
+                          <Shield className="w-2.5 h-2.5" />
+                          <span>Super Admin</span>
+                        </Badge>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 text-[10px]">
-                          Member
-                        </span>
+                        <Badge variant="secondary">Member</Badge>
                       )}
-                    </td>
-                    <td className="py-4 px-6">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                          u.status === "ACTIVE"
-                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                            : "bg-rose-500/20 text-rose-300 border border-rose-500/30"
-                        }`}
-                      >
-                        {u.status}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6 text-slate-500">
-                      {new Date(u.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="py-4 px-6 text-right">
-                      <button
-                        onClick={() => handleToggleStatus(u)}
-                        className={`text-xs font-semibold ${
-                          u.status === "ACTIVE"
-                            ? "text-rose-400 hover:text-rose-300"
-                            : "text-emerald-400 hover:text-emerald-300"
-                        }`}
-                      >
-                        {u.status === "ACTIVE" ? "Deactivate" : "Activate"}
-                      </button>
-                    </td>
-                  </tr>
+                    </TableCell>
+                    <TableCell>
+                      {user.status === "ACTIVE" ? (
+                        <Badge variant="success">Active</Badge>
+                      ) : (
+                        <Badge variant="destructive">Disabled</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-slate-500 text-[11px] font-mono">
+                      {new Date(user.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {!user.is_super_admin && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleStatus(user)}
+                          className={
+                            user.status === "ACTIVE"
+                              ? "text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 h-8"
+                              : "text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/40 h-8"
+                          }
+                        >
+                          <Power className="w-3.5 h-3.5 mr-1" />
+                          <span>{user.status === "ACTIVE" ? "Deactivate" : "Activate"}</span>
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        title="Provision New User"
+        description="Newly provisioned users can sign in with their email and password."
+      >
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
-      </div>
 
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-white mb-1">Create User Account</h2>
-            <p className="text-xs text-slate-400 mb-4">
-              Add a new engineering user to this organization.
-            </p>
-
-            {error && (
-              <div className="mb-4 p-3 rounded-lg bg-rose-950/50 border border-rose-800 text-rose-200 text-xs">
-                {error}
-              </div>
-            )}
-
-            <form onSubmit={handleCreateUser} className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Full Name</label>
-                <input
-                  type="text"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Alex Rivera"
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Email Address</label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="alex@company.com"
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Initial Password</label>
-                <input
-                  type="password"
-                  required
-                  minLength={8}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-3 py-2 text-xs text-slate-400 hover:text-slate-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50"
-                >
-                  {isSubmitting ? "Creating..." : "Create Account"}
-                </button>
-              </div>
-            </form>
+        <form onSubmit={handleCreateUser} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="user-fullname">Full Name</Label>
+            <Input
+              id="user-fullname"
+              type="text"
+              required
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Alex Rivera"
+            />
           </div>
-        </div>
-      )}
+
+          <div className="space-y-1.5">
+            <Label htmlFor="user-email">Email Address</Label>
+            <Input
+              id="user-email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="alex@company.com"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="user-password">Initial Password</Label>
+            <Input
+              id="user-password"
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={"\u2022".repeat(12)}
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowCreateModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              size="sm"
+            >
+              {isSubmitting ? "Creating..." : "Create User"}
+            </Button>
+          </div>
+        </form>
+      </Dialog>
     </div>
   );
 }

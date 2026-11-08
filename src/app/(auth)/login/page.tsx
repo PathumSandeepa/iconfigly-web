@@ -4,6 +4,12 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { apiFetch, ApiError } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Sparkles, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,6 +29,7 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
       router.push("/dashboard");
+      router.refresh();
     } catch (err) {
       const apiErr = err as ApiError;
       setError(apiErr.detail || apiErr.title || "Invalid email or password");
@@ -33,68 +40,75 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-xl">
-            i
+      <Card className="w-full max-w-md border-slate-800 bg-slate-900/90 shadow-2xl">
+        <CardHeader className="space-y-3 pb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-950/60">
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-xl">iconfigly</CardTitle>
+              <CardDescription>Control Plane Sign-In</CardDescription>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">iconfigly</h1>
-            <p className="text-xs text-slate-400">Control Plane Sign-In</p>
+        </CardHeader>
+
+        <CardContent>
+          {error && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="login-email">Email Address</Label>
+              <Input
+                id="login-email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@company.com"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="login-password">Password</Label>
+              <Input
+                id="login-password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={"\u2022".repeat(12)}
+              />
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full mt-2 h-11"
+              size="lg"
+            >
+              {isSubmitting ? "Signing in..." : "Sign In"}
+            </Button>
+          </form>
+        </CardContent>
+
+        <CardFooter className="justify-center border-t border-slate-800/80 pt-4">
+          <div className="text-xs text-slate-500 flex items-center gap-1.5">
+            <span>First time configuring the cluster?</span>
+            <Link
+              href="/setup"
+              className="text-indigo-400 hover:text-indigo-300 font-semibold inline-flex items-center gap-1"
+            >
+              <span>Run Setup</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
           </div>
-        </div>
-
-        {error && (
-          <div className="mb-6 p-4 rounded-xl bg-rose-950/50 border border-rose-800/80 text-rose-200 text-sm">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-              Email Address
-            </label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@company.com"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-              Password
-            </label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••••••"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full mt-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition-colors disabled:opacity-50"
-          >
-            {isSubmitting ? "Signing in..." : "Sign In"}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center text-xs text-slate-500">
-          First time configuring the cluster?{" "}
-          <Link href="/setup" className="text-indigo-400 hover:text-indigo-300">
-            Run Setup
-          </Link>
-        </div>
-      </div>
+        </CardFooter>
+      </Card>
     </div>
   );
 }

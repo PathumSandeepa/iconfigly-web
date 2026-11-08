@@ -34,18 +34,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentProject, setCurrentProjectState] = useState<Project | null>(null);
   const router = useRouter();
 
-  const refreshActor = useCallback(async () => {
-    try {
-      const data = await apiFetch<Actor>("/auth/me");
-      setActor(data);
-      if (typeof window !== "undefined" && data?.csrf_token) {
-        (window as unknown as { __CSRF_TOKEN__?: string }).__CSRF_TOKEN__ = data.csrf_token;
-      }
-    } catch {
-      setActor(null);
-    }
-  }, []);
-
   const refreshProjects = useCallback(async () => {
     try {
       const data = await apiFetch<Project[]>("/projects");
@@ -66,6 +54,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const refreshActor = useCallback(async () => {
+    try {
+      const data = await apiFetch<{
+        user?: { id: string; organization_id: string; email: string; full_name: string; is_super_admin: boolean };
+        actor?: Actor;
+        csrf_token?: string;
+      }>("/auth/me");
+
+      const act = data?.actor;
+      const user = data?.user;
+      if (act || user) {
+        const fullActor: Actor = {
+          user_id: act?.user_id || user?.id || "",
+          organization_id: act?.organization_id || user?.organization_id || "",
+          email: act?.email || user?.email || "",
+          full_name: act?.full_name || user?.full_name || "",
+          is_super_admin: act?.is_super_admin ?? user?.is_super_admin ?? false,
+          team_ids: act?.team_ids || [],
+          lead_team_ids: act?.lead_team_ids || [],
+          auth_method: act?.auth_method || "SESSION",
+          csrf_token: data?.csrf_token || act?.csrf_token || "",
+        };
+        setActor(fullActor);
+        if (typeof window !== "undefined" && fullActor.csrf_token) {
+          (window as unknown as { __CSRF_TOKEN__?: string }).__CSRF_TOKEN__ = fullActor.csrf_token;
+        }
+        await refreshProjects();
+      } else {
+        setActor(null);
+        setProjects([]);
+      }
+    } catch {
+      setActor(null);
+      setProjects([]);
+    }
+  }, [refreshProjects]);
+
   const setCurrentProject = (proj: Project | null) => {
     setCurrentProjectState(proj);
     if (typeof window !== "undefined") {
@@ -79,7 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    (async () => {
+    void (async () => {
       try {
         await refreshActor();
       } finally {
@@ -90,12 +115,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
     };
   }, [refreshActor]);
-
-  useEffect(() => {
-    if (actor) {
-      refreshProjects();
-    }
-  }, [actor, refreshProjects]);
 
   const logout = async () => {
     try {

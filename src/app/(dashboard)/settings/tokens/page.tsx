@@ -3,6 +3,23 @@
 import React, { useEffect, useState } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { PersonalAccessToken } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
+import { KeyRound, Plus, Copy, Check, ShieldAlert, Trash2 } from "lucide-react";
 
 interface CreatePATResponse {
   raw_token: string;
@@ -20,19 +37,30 @@ export default function TokensPage() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const loadTokens = async () => {
+  const fetchTokens = async () => {
     try {
       const data = await apiFetch<PersonalAccessToken[]>("/auth/tokens");
       setTokens(Array.isArray(data) ? data : []);
     } catch {
       setTokens([]);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadTokens();
+    let mounted = true;
+    void (async () => {
+      try {
+        const data = await apiFetch<PersonalAccessToken[]>("/auth/tokens");
+        if (mounted) setTokens(Array.isArray(data) ? data : []);
+      } catch {
+        if (mounted) setTokens([]);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const handleGenerate = async (e: React.FormEvent) => {
@@ -51,7 +79,7 @@ export default function TokensPage() {
       setShowGenerateModal(false);
       setTokenName("");
       setExpiresInDays(30);
-      await loadTokens();
+      await fetchTokens();
     } catch (err) {
       const apiErr = err as ApiError;
       setError(apiErr.detail || apiErr.title || "Failed to generate personal access token");
@@ -66,7 +94,7 @@ export default function TokensPage() {
     }
     try {
       await apiFetch(`/auth/tokens/${tokenId}`, { method: "DELETE" });
-      await loadTokens();
+      await fetchTokens();
     } catch (err) {
       const apiErr = err as ApiError;
       alert(apiErr.detail || apiErr.title || "Failed to revoke token");
@@ -84,174 +112,191 @@ export default function TokensPage() {
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">
-            Personal Access Tokens (PAT)
+          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
+            <KeyRound className="w-6 h-6 text-indigo-400" />
+            <span>Personal Access Tokens (PAT)</span>
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Authenticate CI/CD pipelines, CLI utilities, and automation scripts.
+          <p className="text-xs text-slate-400 mt-1">
+            Programmatic bearer tokens for CLI tooling and automated CI/CD runners.
           </p>
         </div>
-        <button
-          onClick={() => {
-            setError(null);
-            setShowGenerateModal(true);
-          }}
-          className="px-4 py-2 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
+
+        <Button
+          onClick={() => setShowGenerateModal(true)}
+          className="gap-2"
         >
-          + Generate Token
-        </button>
+          <Plus className="w-4 h-4" />
+          <span>+ Generate Token</span>
+        </Button>
       </div>
-
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-        {loading ? (
-          <div className="p-8 text-center text-xs text-slate-500">Loading tokens...</div>
-        ) : tokens.length === 0 ? (
-          <div className="p-8 text-center text-xs text-slate-500">
-            No active personal access tokens. Generate one for CLI or CI/CD access.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-slate-800 text-slate-400 bg-slate-900/80">
-                  <th className="py-3.5 px-6 font-semibold">Token Name</th>
-                  <th className="py-3.5 px-6 font-semibold">Key Prefix</th>
-                  <th className="py-3.5 px-6 font-semibold">Created</th>
-                  <th className="py-3.5 px-6 font-semibold">Expires</th>
-                  <th className="py-3.5 px-6 font-semibold text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {tokens.map((t) => (
-                  <tr key={t.id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="py-4 px-6 font-medium text-white">{t.name}</td>
-                    <td className="py-4 px-6 font-mono text-slate-400">
-                      {t.prefix || "icfg_pat_..."}
-                    </td>
-                    <td className="py-4 px-6 text-slate-500">
-                      {new Date(t.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="py-4 px-6 text-slate-500">
-                      {t.expires_at ? new Date(t.expires_at).toLocaleDateString() : "Never"}
-                    </td>
-                    <td className="py-4 px-6 text-right">
-                      <button
-                        onClick={() => handleRevoke(t.id)}
-                        className="text-rose-400 hover:text-rose-300 font-semibold"
-                      >
-                        Revoke
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {showGenerateModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-white mb-1">Generate Personal Access Token</h2>
-            <p className="text-xs text-slate-400 mb-4">
-              Tokens inherit your organization roles and cannot bypass permissions.
-            </p>
-
-            {error && (
-              <div className="mb-4 p-3 rounded-lg bg-rose-950/50 border border-rose-800 text-rose-200 text-xs">
-                {error}
-              </div>
-            )}
-
-            <form onSubmit={handleGenerate} className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Token Name</label>
-                <input
-                  type="text"
-                  required
-                  value={tokenName}
-                  onChange={(e) => setTokenName(e.target.value)}
-                  placeholder="GitHub Actions CI Runner"
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Expiration (Days)
-                </label>
-                <select
-                  value={expiresInDays}
-                  onChange={(e) => setExpiresInDays(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                >
-                  <option value={7}>7 Days</option>
-                  <option value={30}>30 Days</option>
-                  <option value={60}>60 Days</option>
-                  <option value={90}>90 Days</option>
-                  <option value={365}>1 Year</option>
-                </select>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowGenerateModal(false)}
-                  className="px-3 py-2 text-xs text-slate-400 hover:text-slate-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50"
-                >
-                  {isSubmitting ? "Generating..." : "Generate Token"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {createdRawToken && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-slate-900 border border-amber-500/40 rounded-2xl p-6 shadow-2xl space-y-4">
-            <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
-              <span>Security Warning: Copy Your Token</span>
-            </div>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Make sure to copy your personal access token now. You will not be able to see it again!
-            </p>
-
-            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-emerald-400 break-all select-all">
-              {createdRawToken}
-            </div>
-
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-[11px] text-slate-500">
-                Prefix: {createdRawToken.slice(0, 12)}...
+        <Alert variant="warning" className="border-amber-700/80 bg-amber-950/40">
+          <ShieldAlert className="w-4 h-4 text-amber-400" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <span className="font-bold text-amber-300 block text-xs">
+                Copy your personal access token now.
               </span>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleCopy}
-                  className="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
-                >
-                  {copied ? "Copied!" : "Copy Token"}
-                </button>
-                <button
-                  onClick={() => setCreatedRawToken(null)}
-                  className="px-3 py-2 text-xs text-slate-400 hover:text-slate-200"
-                >
-                  Done
-                </button>
-              </div>
+              <span className="text-[11px] text-amber-200/80 block mt-0.5">
+                For security reasons, this token will never be displayed again.
+              </span>
+              <code className="block mt-2 p-2 rounded-lg bg-black/60 font-mono text-xs text-emerald-300 break-all border border-amber-900/60 select-all">
+                {createdRawToken}
+              </code>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopy}
+                className="gap-1.5 border-amber-800 text-amber-300 hover:bg-amber-900/50"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copied ? "Copied!" : "Copy"}</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCreatedRawToken(null)}
+                className="text-amber-400 hover:text-white"
+              >
+                Dismiss
+              </Button>
             </div>
           </div>
-        </div>
+        </Alert>
       )}
+
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="p-12 text-center text-xs text-slate-500">Loading tokens...</div>
+          ) : tokens.length === 0 ? (
+            <div className="p-12 text-center text-xs text-slate-500">
+              No personal access tokens generated. Click &quot;+ Generate Token&quot; to create a CLI token.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Token Name</TableHead>
+                  <TableHead>Prefix</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Expires</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tokens.map((token) => {
+                  const isRevoked = Boolean(token.revoked_at);
+                  const isExpired = token.expires_at && new Date(token.expires_at) < new Date();
+                  return (
+                    <TableRow key={token.id}>
+                      <TableCell className="font-semibold text-white">
+                        {token.name}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="font-mono">
+                          {token.prefix}...
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {isRevoked ? (
+                          <Badge variant="destructive">Revoked</Badge>
+                        ) : isExpired ? (
+                          <Badge variant="warning">Expired</Badge>
+                        ) : (
+                          <Badge variant="success">Active</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-slate-400 text-[11px] font-mono">
+                        {token.expires_at ? new Date(token.expires_at).toLocaleDateString() : "Never"}
+                      </TableCell>
+                      <TableCell className="text-slate-500 text-[11px] font-mono">
+                        {new Date(token.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {!isRevoked && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRevoke(token.id)}
+                            className="text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 h-8"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 mr-1" />
+                            <span>Revoke</span>
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog
+        open={showGenerateModal}
+        onOpenChange={setShowGenerateModal}
+        title="Generate Personal Access Token"
+        description="Tokens inherit your user permissions across all authorized organization and project scopes."
+      >
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <form onSubmit={handleGenerate} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="pat-name">Token Description</Label>
+            <Input
+              id="pat-name"
+              type="text"
+              required
+              value={tokenName}
+              onChange={(e) => setTokenName(e.target.value)}
+              placeholder="e.g. CI/CD Pipeline Runner, CLI Desktop"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="pat-expiry">Token Expiration</Label>
+            <Select
+              id="pat-expiry"
+              value={expiresInDays}
+              onChange={(e) => setExpiresInDays(Number(e.target.value))}
+            >
+              <option value={7}>7 Days</option>
+              <option value={30}>30 Days</option>
+              <option value={90}>90 Days</option>
+              <option value={365}>1 Year</option>
+            </Select>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowGenerateModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              size="sm"
+            >
+              {isSubmitting ? "Generating..." : "Generate Token"}
+            </Button>
+          </div>
+        </form>
+      </Dialog>
     </div>
   );
 }

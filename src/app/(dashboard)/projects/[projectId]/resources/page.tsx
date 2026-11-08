@@ -3,6 +3,23 @@
 import React, { useEffect, useState, use } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { ResourceEntity, Environment, Team, ResourceType } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
+import { Database, Plus, Users, Layers } from "lucide-react";
 
 export default function ResourcesPage({
   params,
@@ -27,15 +44,8 @@ export default function ResourcesPage({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadData = async () => {
+  const fetchResources = async () => {
     try {
-      const [envsData, teamsData] = await Promise.all([
-        apiFetch<Environment[]>(`/projects/${projectId}/environments`),
-        apiFetch<Team[]>("/teams"),
-      ]);
-      setEnvironments(Array.isArray(envsData) ? envsData : []);
-      setTeams(Array.isArray(teamsData) ? teamsData : []);
-
       let url = `/projects/${projectId}/resources`;
       const queryParams = new URLSearchParams();
       if (selectedEnvId !== "all") queryParams.set("env_id", selectedEnvId);
@@ -47,13 +57,40 @@ export default function ResourcesPage({
       setResources(Array.isArray(resData) ? resData : []);
     } catch {
       setResources([]);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    let mounted = true;
+    void (async () => {
+      try {
+        const [envsData, teamsData] = await Promise.all([
+          apiFetch<Environment[]>(`/projects/${projectId}/environments`).catch(() => []),
+          apiFetch<Team[]>("/teams").catch(() => []),
+        ]);
+        if (mounted) {
+          setEnvironments(Array.isArray(envsData) ? envsData : []);
+          setTeams(Array.isArray(teamsData) ? teamsData : []);
+        }
+
+        let url = `/projects/${projectId}/resources`;
+        const queryParams = new URLSearchParams();
+        if (selectedEnvId !== "all") queryParams.set("env_id", selectedEnvId);
+        if (selectedType !== "all") queryParams.set("type", selectedType);
+        const qs = queryParams.toString();
+        if (qs) url += `?${qs}`;
+
+        const resData = await apiFetch<ResourceEntity[]>(url).catch(() => []);
+        if (mounted) {
+          setResources(Array.isArray(resData) ? resData : []);
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
   }, [projectId, selectedEnvId, selectedType]);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,11 +110,11 @@ export default function ResourcesPage({
     setError(null);
     setIsSubmitting(true);
 
-    let parsedMeta: Record<string, unknown> = {};
+    let parsedMetadata = {};
     try {
-      parsedMeta = JSON.parse(metadataJson);
+      parsedMetadata = JSON.parse(metadataJson);
     } catch {
-      setError("Connection metadata must be valid JSON.");
+      setError("Connection metadata must be valid JSON");
       setIsSubmitting(false);
       return;
     }
@@ -87,11 +124,11 @@ export default function ResourcesPage({
         method: "POST",
         body: JSON.stringify({
           environment_id: envId,
-          owner_team_id: ownerTeamId || undefined,
-          slug,
           name,
+          slug,
           resource_type: resourceType,
-          connection_metadata: parsedMeta,
+          owner_team_id: ownerTeamId || undefined,
+          connection_metadata: parsedMetadata,
         }),
       });
       setShowRegisterModal(false);
@@ -99,7 +136,7 @@ export default function ResourcesPage({
       setSlug("");
       setEnvId("");
       setOwnerTeamId("");
-      await loadData();
+      await fetchResources();
     } catch (err) {
       const apiErr = err as ApiError;
       setError(apiErr.detail || apiErr.title || "Failed to provision resource");
@@ -108,36 +145,36 @@ export default function ResourcesPage({
     }
   };
 
-  const envMap = new Map(environments.map((e) => [e.id, e]));
-  const teamMap = new Map(teams.map((t) => [t.id, t]));
+  const envMap = new Map(environments.map((e) => [e.id, e.name]));
+  const teamMap = new Map(teams.map((t) => [t.id, t.name]));
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">
-            Infrastructure Resources
+          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
+            <Database className="w-6 h-6 text-indigo-400" />
+            <span>Infrastructure Resources</span>
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Cataloged databases, caches, queues, and object storage scoped by stage.
+          <p className="text-xs text-slate-400 mt-1">
+            Databases, caches, message brokers, and cloud backends bound to runtime stages.
           </p>
         </div>
-        <button
-          onClick={() => {
-            setError(null);
-            setShowRegisterModal(true);
-          }}
-          className="px-4 py-2 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
+
+        <Button
+          onClick={() => setShowRegisterModal(true)}
+          className="gap-2"
         >
-          + Provision Resource
-        </button>
+          <Plus className="w-4 h-4" />
+          <span>+ Provision Resource</span>
+        </Button>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <select
+        <Select
           value={selectedEnvId}
           onChange={(e) => setSelectedEnvId(e.target.value)}
-          className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="w-56"
         >
           <option value="all">All Environments</option>
           {environments.map((env) => (
@@ -145,225 +182,208 @@ export default function ResourcesPage({
               {env.name} ({env.slug})
             </option>
           ))}
-        </select>
+        </Select>
 
-        <select
+        <Select
           value={selectedType}
           onChange={(e) => setSelectedType(e.target.value)}
-          className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="w-48"
         >
           <option value="all">All Resource Types</option>
-          <option value="POSTGRES">PostgreSQL</option>
-          <option value="MYSQL">MySQL</option>
-          <option value="REDIS">Redis</option>
-          <option value="KAFKA">Apache Kafka</option>
-          <option value="S3">Amazon S3 / Blob</option>
-          <option value="EXTERNAL_API">External API</option>
-          <option value="CUSTOM">Custom</option>
-        </select>
+          <option value="POSTGRES">POSTGRES</option>
+          <option value="MYSQL">MYSQL</option>
+          <option value="REDIS">REDIS</option>
+          <option value="KAFKA">KAFKA</option>
+          <option value="S3">S3</option>
+          <option value="EXTERNAL_API">EXTERNAL_API</option>
+          <option value="CUSTOM">CUSTOM</option>
+        </Select>
       </div>
 
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-        {loading ? (
-          <div className="p-8 text-center text-xs text-slate-500">Loading resources...</div>
-        ) : resources.length === 0 ? (
-          <div className="p-8 text-center text-xs text-slate-500">
-            No infrastructure resources found for the selected filters.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-slate-800 text-slate-400 bg-slate-900/80">
-                  <th className="py-3.5 px-6 font-semibold">Resource</th>
-                  <th className="py-3.5 px-6 font-semibold">Type</th>
-                  <th className="py-3.5 px-6 font-semibold">Environment</th>
-                  <th className="py-3.5 px-6 font-semibold">Owner Team</th>
-                  <th className="py-3.5 px-6 font-semibold">Connection Metadata</th>
-                  <th className="py-3.5 px-6 font-semibold">Version</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {resources.map((r) => {
-                  const env = envMap.get(r.environment_id);
-                  const team = r.owner_team_id ? teamMap.get(r.owner_team_id) : null;
-                  return (
-                    <tr key={r.id} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="py-4 px-6">
-                        <div className="font-medium text-white">{r.name}</div>
-                        <span className="font-mono text-slate-400 text-[11px]">{r.slug}</span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 font-mono text-[10px] text-slate-300">
-                          {r.resource_type}
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="p-12 text-center text-xs text-slate-500">Loading infrastructure...</div>
+          ) : resources.length === 0 ? (
+            <div className="p-12 text-center text-xs text-slate-500">
+              No infrastructure resources cataloged. Click &quot;+ Provision Resource&quot; to register backends.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Resource</TableHead>
+                  <TableHead>Identifier</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Environment</TableHead>
+                  <TableHead>Owner Squad</TableHead>
+                  <TableHead>Version</TableHead>
+                  <TableHead className="text-right">Created</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {resources.map((res) => (
+                  <TableRow key={res.id}>
+                    <TableCell className="font-semibold text-white">
+                      {res.name}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="font-mono">
+                        {res.slug}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="default" className="font-mono text-[10px]">
+                        {res.resource_type}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="gap-1">
+                        <Layers className="w-2.5 h-2.5" />
+                        <span>{envMap.get(res.environment_id) || res.environment_id.slice(0, 8)}</span>
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="gap-1">
+                        <Users className="w-2.5 h-2.5" />
+                        <span>
+                          {res.owner_team_id ? teamMap.get(res.owner_team_id) || "Squad Assigned" : "Global"}
                         </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        {env ? (
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                              env.is_production
-                                ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
-                                : "bg-slate-800 text-slate-300 border border-slate-700"
-                            }`}
-                          >
-                            {env.name}
-                          </span>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="py-4 px-6 text-slate-400">
-                        {team ? team.name : <span className="text-slate-500">Unassigned</span>}
-                      </td>
-                      <td className="py-4 px-6 font-mono text-[11px] text-slate-400 max-w-xs truncate">
-                        {JSON.stringify(r.connection_metadata || {})}
-                      </td>
-                      <td className="py-4 px-6 text-slate-500 font-mono">v{r.version}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-slate-400 font-mono text-[11px]">
+                      v{res.version}
+                    </TableCell>
+                    <TableCell className="text-slate-500 text-[11px] font-mono text-right">
+                      {new Date(res.created_at).toLocaleDateString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog
+        open={showRegisterModal}
+        onOpenChange={setShowRegisterModal}
+        title="Provision Infrastructure Resource"
+        description="Register a stateful data store, queue, or external service bound strictly to an environment."
+      >
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
-      </div>
 
-      {showRegisterModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-white mb-1">Provision Resource Dependency</h2>
-            <p className="text-xs text-slate-400 mb-4">
-              Catalog a database, queue, or storage engine scoped to an environment.
-            </p>
-
-            {error && (
-              <div className="mb-4 p-3 rounded-lg bg-rose-950/50 border border-rose-800 text-rose-200 text-xs">
-                {error}
-              </div>
-            )}
-
-            <form onSubmit={handleRegister} className="space-y-3.5">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Environment Stage
-                  </label>
-                  <select
-                    required
-                    value={envId}
-                    onChange={(e) => setEnvId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  >
-                    <option value="">Select stage...</option>
-                    {environments.map((e) => (
-                      <option key={e.id} value={e.id}>
-                        {e.name} ({e.slug})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Resource Type
-                  </label>
-                  <select
-                    value={resourceType}
-                    onChange={(e) => setResourceType(e.target.value as ResourceType)}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
-                  >
-                    <option value="POSTGRES">POSTGRES</option>
-                    <option value="MYSQL">MYSQL</option>
-                    <option value="REDIS">REDIS</option>
-                    <option value="KAFKA">KAFKA</option>
-                    <option value="S3">S3</option>
-                    <option value="EXTERNAL_API">EXTERNAL_API</option>
-                    <option value="CUSTOM">CUSTOM</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Resource Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={handleNameChange}
-                  placeholder="Payments Postgres Database"
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Slug</label>
-                <input
-                  type="text"
-                  required
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  placeholder="payments-postgres"
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Owner Squad (Optional)
-                </label>
-                <select
-                  value={ownerTeamId}
-                  onChange={(e) => setOwnerTeamId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                >
-                  <option value="">Unassigned</option>
-                  {teams.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Connection Metadata (JSON)
-                </label>
-                <textarea
-                  rows={4}
-                  required
-                  value={metadataJson}
-                  onChange={(e) => setMetadataJson(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-                <span className="text-[11px] text-amber-400 mt-1 block">
-                  Security Guardrail: Do NOT include raw passwords, tokens, or secret keys here.
-                </span>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowRegisterModal(false)}
-                  className="px-3 py-2 text-xs text-slate-400 hover:text-slate-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !envId}
-                  className="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50"
-                >
-                  {isSubmitting ? "Provisioning..." : "Provision Resource"}
-                </button>
-              </div>
-            </form>
+        <form onSubmit={handleRegister} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="res-env">Runtime Environment</Label>
+            <Select
+              id="res-env"
+              required
+              value={envId}
+              onChange={(e) => setEnvId(e.target.value)}
+            >
+              <option value="">-- Choose Environment Stage --</option>
+              {environments.map((env) => (
+                <option key={env.id} value={env.id}>
+                  {env.name} ({env.slug})
+                </option>
+              ))}
+            </Select>
           </div>
-        </div>
-      )}
+
+          <div className="space-y-1.5">
+            <Label htmlFor="res-name">Resource Name</Label>
+            <Input
+              id="res-name"
+              type="text"
+              required
+              value={name}
+              onChange={handleNameChange}
+              placeholder="Payments Postgres Database"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="res-slug">Slug Identifier</Label>
+            <Input
+              id="res-slug"
+              type="text"
+              required
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              placeholder="payments-db"
+              className="font-mono"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="res-type">Resource Type</Label>
+            <Select
+              id="res-type"
+              value={resourceType}
+              onChange={(e) => setResourceType(e.target.value as ResourceType)}
+            >
+              <option value="POSTGRES">POSTGRES (Relational Database)</option>
+              <option value="MYSQL">MYSQL (Relational Database)</option>
+              <option value="REDIS">REDIS (In-Memory Cache)</option>
+              <option value="KAFKA">KAFKA (Event Streaming Broker)</option>
+              <option value="S3">S3 (Object Storage Bucket)</option>
+              <option value="EXTERNAL_API">EXTERNAL_API (Third-Party SaaS)</option>
+              <option value="CUSTOM">CUSTOM</option>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="res-owner-team">Owner Squad</Label>
+            <Select
+              id="res-owner-team"
+              required
+              value={ownerTeamId}
+              onChange={(e) => setOwnerTeamId(e.target.value)}
+            >
+              <option value="">-- Select Owner Team --</option>
+              {teams.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="res-meta">Connection Metadata (JSON)</Label>
+            <textarea
+              id="res-meta"
+              rows={3}
+              value={metadataJson}
+              onChange={(e) => setMetadataJson(e.target.value)}
+              className="flex w-full rounded-xl border border-slate-800 bg-slate-900/90 px-3 py-2 text-xs text-white shadow-sm font-mono placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowRegisterModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting || !envId || !ownerTeamId}
+              size="sm"
+            >
+              {isSubmitting ? "Provisioning..." : "Provision Resource"}
+            </Button>
+          </div>
+        </form>
+      </Dialog>
     </div>
   );
 }

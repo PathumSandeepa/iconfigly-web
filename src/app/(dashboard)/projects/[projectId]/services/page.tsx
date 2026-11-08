@@ -4,6 +4,23 @@ import React, { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { apiFetch, ApiError } from "@/lib/api";
 import { ServiceEntity, Team } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
+import { Cpu, Plus, Search, ArrowUpRight, Users } from "lucide-react";
 
 export default function ServicesPage({
   params,
@@ -23,29 +40,34 @@ export default function ServicesPage({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadServices = async () => {
+  const fetchServices = async () => {
     try {
       const data = await apiFetch<ServiceEntity[]>(`/projects/${projectId}/services`);
       setServices(Array.isArray(data) ? data : []);
     } catch {
       setServices([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadTeams = async () => {
-    try {
-      const data = await apiFetch<Team[]>("/teams");
-      setTeams(Array.isArray(data) ? data : []);
-    } catch {
-      setTeams([]);
     }
   };
 
   useEffect(() => {
-    loadServices();
-    loadTeams();
+    let mounted = true;
+    void (async () => {
+      try {
+        const [servicesData, teamsData] = await Promise.all([
+          apiFetch<ServiceEntity[]>(`/projects/${projectId}/services`).catch(() => []),
+          apiFetch<Team[]>("/teams").catch(() => []),
+        ]);
+        if (mounted) {
+          setServices(Array.isArray(servicesData) ? servicesData : []);
+          setTeams(Array.isArray(teamsData) ? teamsData : []);
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
   }, [projectId]);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,7 +101,7 @@ export default function ServicesPage({
       setSlug("");
       setDescription("");
       setOwnerTeamId("");
-      await loadServices();
+      await fetchServices();
     } catch (err) {
       const apiErr = err as ApiError;
       setError(apiErr.detail || apiErr.title || "Failed to register microservice");
@@ -88,188 +110,194 @@ export default function ServicesPage({
     }
   };
 
-  const teamMap = new Map(teams.map((t) => [t.id, t]));
-
-  const filtered = services.filter((s) => {
-    const q = search.toLowerCase();
-    return s.name.toLowerCase().includes(q) || s.slug.toLowerCase().includes(q);
-  });
+  const teamMap = new Map(teams.map((t) => [t.id, t.name]));
+  const filteredServices = services.filter(
+    (s) =>
+      s.name.toLowerCase().includes(search.toLowerCase()) ||
+      s.slug.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Microservice Catalog</h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Registered microservices, ownership boundaries, and deployment endpoints.
+          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
+            <Cpu className="w-6 h-6 text-indigo-400" />
+            <span>Microservice Catalog</span>
+          </h1>
+          <p className="text-xs text-slate-400 mt-1">
+            Service inventory, squad ownership, and runtime dependency graph.
           </p>
         </div>
-        <button
+
+        <Button
           onClick={() => setShowRegisterModal(true)}
-          className="px-4 py-2 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
+          className="gap-2"
         >
-          + Register Service
-        </button>
+          <Plus className="w-4 h-4" />
+          <span>+ Register Service</span>
+        </Button>
       </div>
 
-      <div className="flex items-center gap-4">
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search microservices by name or slug..."
-          className="w-full max-w-md px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-        />
-      </div>
-
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-        {loading ? (
-          <div className="p-8 text-center text-xs text-slate-500">Loading catalog...</div>
-        ) : filtered.length === 0 ? (
-          <div className="p-8 text-center text-xs text-slate-500">
-            {search ? "No microservices match your search." : "No microservices registered yet."}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-slate-800 text-slate-400 bg-slate-900/80">
-                  <th className="py-3.5 px-6 font-semibold">Service Name</th>
-                  <th className="py-3.5 px-6 font-semibold">Slug</th>
-                  <th className="py-3.5 px-6 font-semibold">Owner Team</th>
-                  <th className="py-3.5 px-6 font-semibold">Description</th>
-                  <th className="py-3.5 px-6 font-semibold text-right">Single-Pane View</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {filtered.map((s) => {
-                  const team = teamMap.get(s.owner_team_id);
-                  return (
-                    <tr key={s.id} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="py-4 px-6 font-medium text-white">{s.name}</td>
-                      <td className="py-4 px-6 font-mono text-slate-400">{s.slug}</td>
-                      <td className="py-4 px-6">
-                        {team ? (
-                          <span className="px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-indigo-300 font-semibold text-[11px]">
-                            {team.name}
-                          </span>
-                        ) : (
-                          <span className="text-slate-500 text-[11px]">Unassigned</span>
-                        )}
-                      </td>
-                      <td className="py-4 px-6 text-slate-400 max-w-sm truncate">
-                        {s.description || "—"}
-                      </td>
-                      <td className="py-4 px-6 text-right">
-                        <Link
-                          href={`/projects/${projectId}/services/${s.slug}`}
-                          className="px-3 py-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-600/30 font-semibold transition-colors inline-block"
-                        >
-                          Context View &rarr;
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {showRegisterModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-white mb-1">Register Microservice</h2>
-            <p className="text-xs text-slate-400 mb-4">
-              Add a deployable service aggregate to this project catalog.
-            </p>
-
-            {error && (
-              <div className="mb-4 p-3 rounded-lg bg-rose-950/50 border border-rose-800 text-rose-200 text-xs">
-                {error}
-              </div>
-            )}
-
-            <form onSubmit={handleRegister} className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Service Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={handleNameChange}
-                  placeholder="Payment Gateway"
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Slug</label>
-                <input
-                  type="text"
-                  required
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  placeholder="payment-gateway"
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white font-mono text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Owner Squad
-                </label>
-                <select
-                  required
-                  value={ownerTeamId}
-                  onChange={(e) => setOwnerTeamId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                >
-                  <option value="">Select owner squad...</option>
-                  {teams.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Description
-                </label>
-                <textarea
-                  rows={2}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Handles credit cards, wire transfers, and fraud analysis"
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowRegisterModal(false)}
-                  className="px-3 py-2 text-xs text-slate-400 hover:text-slate-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !ownerTeamId}
-                  className="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50"
-                >
-                  {isSubmitting ? "Registering..." : "Register Service"}
-                </button>
-              </div>
-            </form>
-          </div>
+      <div className="flex items-center gap-3">
+        <div className="relative w-80">
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+          <Input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search microservices by name or slug..."
+            className="pl-9 font-sans"
+          />
         </div>
-      )}
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="p-12 text-center text-xs text-slate-500">Loading catalog...</div>
+          ) : filteredServices.length === 0 ? (
+            <div className="p-12 text-center text-xs text-slate-500">
+              No microservices registered yet. Click &quot;+ Register Service&quot; to catalog applications.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Service</TableHead>
+                  <TableHead>Identifier</TableHead>
+                  <TableHead>Owner Squad</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Cataloged At</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredServices.map((service) => (
+                  <TableRow key={service.id}>
+                    <TableCell className="font-semibold text-white">
+                      {service.name}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="font-mono">
+                        {service.slug}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="gap-1">
+                        <Users className="w-2.5 h-2.5" />
+                        <span>{teamMap.get(service.owner_team_id) || "Squad Unassigned"}</span>
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-slate-400 max-w-xs truncate">
+                      {service.description || "—"}
+                    </TableCell>
+                    <TableCell className="text-slate-500 text-[11px] font-mono">
+                      {new Date(service.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Link
+                        href={`/projects/${projectId}/services/${service.slug}`}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors"
+                      >
+                        <span>Single-Pane Context</span>
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog
+        open={showRegisterModal}
+        onOpenChange={setShowRegisterModal}
+        title="Register New Microservice"
+        description="Cataloging a service establishes its ownership boundary and unlocks environment bindings."
+      >
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <form onSubmit={handleRegister} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="svc-name">Service Name</Label>
+            <Input
+              id="svc-name"
+              type="text"
+              required
+              value={name}
+              onChange={handleNameChange}
+              placeholder="Payment Gateway"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="svc-slug">Slug Identifier</Label>
+            <Input
+              id="svc-slug"
+              type="text"
+              required
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              placeholder="payment-service"
+              className="font-mono"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="svc-team">Owner Squad</Label>
+            <Select
+              id="svc-team"
+              required
+              value={ownerTeamId}
+              onChange={(e) => setOwnerTeamId(e.target.value)}
+            >
+              <option value="">-- Choose Owning Team --</option>
+              {teams.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="svc-desc">Description</Label>
+            <textarea
+              id="svc-desc"
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Handles credit cards, wire transfers, and fraud analysis"
+              className="flex w-full rounded-xl border border-slate-800 bg-slate-900/90 px-3 py-2 text-xs text-white shadow-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 font-sans"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowRegisterModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting || !ownerTeamId}
+              size="sm"
+            >
+              {isSubmitting ? "Registering..." : "Register Service"}
+            </Button>
+          </div>
+        </form>
+      </Dialog>
     </div>
   );
 }

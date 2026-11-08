@@ -11,6 +11,22 @@ import {
   Team,
   User,
 } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Dialog } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { ShieldCheck, Plus, RefreshCw, Trash2 } from "lucide-react";
 
 export default function AccessPage({
   params,
@@ -46,7 +62,7 @@ export default function AccessPage({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const loadBaseData = async () => {
+  const fetchBaseData = async () => {
     try {
       const [bData, envsData, svcsData, resData, teamsData, usersData] = await Promise.all([
         apiFetch<RoleBinding[]>(`/projects/${projectId}/access/bindings`),
@@ -65,13 +81,37 @@ export default function AccessPage({
       setUsers(Array.isArray(usersData) ? usersData : []);
     } catch {
       setBindings([]);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadBaseData();
+    let mounted = true;
+    void (async () => {
+      try {
+        const [bData, envsData, svcsData, resData, teamsData, usersData] = await Promise.all([
+          apiFetch<RoleBinding[]>(`/projects/${projectId}/access/bindings`).catch(() => []),
+          apiFetch<Environment[]>(`/projects/${projectId}/environments`).catch(() => []),
+          apiFetch<ServiceEntity[]>(`/projects/${projectId}/services`).catch(() => []),
+          apiFetch<ResourceEntity[]>(`/projects/${projectId}/resources`).catch(() => []),
+          apiFetch<Team[]>("/teams").catch(() => []),
+          apiFetch<User[]>("/users").catch(() => []),
+        ]);
+
+        if (mounted) {
+          setBindings(Array.isArray(bData) ? bData : []);
+          setEnvironments(Array.isArray(envsData) ? envsData : []);
+          setServices(Array.isArray(svcsData) ? svcsData : []);
+          setResources(Array.isArray(resData) ? resData : []);
+          setTeams(Array.isArray(teamsData) ? teamsData : []);
+          setUsers(Array.isArray(usersData) ? usersData : []);
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
   }, [projectId]);
 
   const loadInspection = async () => {
@@ -91,9 +131,26 @@ export default function AccessPage({
 
   useEffect(() => {
     if (activeTab === "INSPECT") {
-      loadInspection();
+      let mounted = true;
+      void (async () => {
+        if (!inspectScopeId) return;
+        setInspectLoading(true);
+        try {
+          const data = await apiFetch<EffectivePermission[]>(
+            `/projects/${projectId}/access/inspect?scope_type=${inspectScopeType}&scope_id=${inspectScopeId}`
+          );
+          if (mounted) setEffectivePermissions(Array.isArray(data) ? data : []);
+        } catch {
+          if (mounted) setEffectivePermissions([]);
+        } finally {
+          if (mounted) setInspectLoading(false);
+        }
+      })();
+      return () => {
+        mounted = false;
+      };
     }
-  }, [activeTab, inspectScopeType, inspectScopeId]);
+  }, [activeTab, inspectScopeType, inspectScopeId, projectId]);
 
   const handleGrant = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,7 +170,7 @@ export default function AccessPage({
       });
       setShowGrantModal(false);
       setSubjectId("");
-      await loadBaseData();
+      await fetchBaseData();
     } catch (err) {
       const apiErr = err as ApiError;
       setActionError(apiErr.detail || apiErr.title || "Failed to grant role binding");
@@ -128,7 +185,7 @@ export default function AccessPage({
       await apiFetch(`/projects/${projectId}/access/bindings/${bindingId}`, {
         method: "DELETE",
       });
-      await loadBaseData();
+      await fetchBaseData();
     } catch (err) {
       const apiErr = err as ApiError;
       alert(apiErr.detail || apiErr.title || "Failed to revoke binding");
@@ -140,13 +197,14 @@ export default function AccessPage({
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">
-            Scoped Access Control (RBAC)
+          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
+            <ShieldCheck className="w-6 h-6 text-indigo-400" />
+            <span>Scoped Access Control (RBAC)</span>
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Hierarchical authorization matrix and "Who Has Access?" audit inspector.
+          <p className="text-xs text-slate-400 mt-1">
+            Hierarchical authorization matrix and &quot;Who Has Access?&quot; audit inspector.
           </p>
         </div>
 
@@ -154,7 +212,7 @@ export default function AccessPage({
           <div className="flex items-center p-1 rounded-xl bg-slate-900 border border-slate-800">
             <button
               onClick={() => setActiveTab("BINDINGS")}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === "BINDINGS"
                   ? "bg-indigo-600 text-white shadow-md shadow-indigo-950"
                   : "text-slate-400 hover:text-slate-200"
@@ -164,7 +222,7 @@ export default function AccessPage({
             </button>
             <button
               onClick={() => setActiveTab("INSPECT")}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === "INSPECT"
                   ? "bg-indigo-600 text-white shadow-md shadow-indigo-950"
                   : "text-slate-400 hover:text-slate-200"
@@ -175,41 +233,42 @@ export default function AccessPage({
           </div>
 
           {activeTab === "BINDINGS" && (
-            <button
+            <Button
               onClick={() => {
                 setActionError(null);
                 setShowGrantModal(true);
               }}
-              className="px-4 py-2 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
+              className="gap-2"
             >
-              + Grant Role
-            </button>
+              <Plus className="w-4 h-4" />
+              <span>+ Grant Role</span>
+            </Button>
           )}
         </div>
       </div>
 
       {activeTab === "BINDINGS" ? (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-          {loading ? (
-            <div className="p-8 text-center text-xs text-slate-500">Loading role bindings...</div>
-          ) : bindings.length === 0 ? (
-            <div className="p-8 text-center text-xs text-slate-500">
-              No custom role bindings assigned in this project hierarchy yet.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 bg-slate-900/80">
-                    <th className="py-3.5 px-6 font-semibold">Subject</th>
-                    <th className="py-3.5 px-6 font-semibold">Subject Type</th>
-                    <th className="py-3.5 px-6 font-semibold">Granted Role</th>
-                    <th className="py-3.5 px-6 font-semibold">Scope</th>
-                    <th className="py-3.5 px-6 font-semibold">Expires</th>
-                    <th className="py-3.5 px-6 font-semibold text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
+        <Card>
+          <CardContent className="p-0">
+            {loading ? (
+              <div className="p-12 text-center text-xs text-slate-500">Loading role bindings...</div>
+            ) : bindings.length === 0 ? (
+              <div className="p-12 text-center text-xs text-slate-500">
+                No custom role bindings assigned in this project hierarchy yet.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Subject</TableHead>
+                    <TableHead>Subject Type</TableHead>
+                    <TableHead>Granted Role</TableHead>
+                    <TableHead>Scope</TableHead>
+                    <TableHead>Expires</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {bindings.map((b) => {
                     const subjectName =
                       b.subject_type === "USER"
@@ -217,368 +276,349 @@ export default function AccessPage({
                         : teamMap.get(b.subject_id)?.name || b.subject_id;
 
                     return (
-                      <tr key={b.id} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="py-4 px-6 font-medium text-white">{subjectName}</td>
-                        <td className="py-4 px-6">
-                          <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                      <TableRow key={b.id}>
+                        <TableCell className="font-semibold text-white">{subjectName}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-mono text-[10px]">
                             {b.subject_type}
-                          </span>
-                        </td>
-                        <td className="py-4 px-6">
-                          <span className="font-bold text-[11px] px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono">
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="default" className="font-mono text-[10px]">
                             {b.role_name}
-                          </span>
-                        </td>
-                        <td className="py-4 px-6 font-mono text-[11px] text-slate-400">
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-mono text-[11px] text-slate-400">
                           {b.scope_type}
-                        </td>
-                        <td className="py-4 px-6 text-slate-500">
+                        </TableCell>
+                        <TableCell className="text-slate-500 text-[11px] font-mono">
                           {b.expires_at ? new Date(b.expires_at).toLocaleDateString() : "Never"}
-                        </td>
-                        <td className="py-4 px-6 text-right">
-                          <button
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => handleRevoke(b.id)}
-                            className="text-rose-400 hover:text-rose-300 font-semibold"
+                            className="text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 h-8"
                           >
-                            Revoke
-                          </button>
-                        </td>
-                      </tr>
+                            <Trash2 className="w-3.5 h-3.5 mr-1" />
+                            <span>Revoke</span>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-6">
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800">
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider mb-4">
-              Inspect Scope Target
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Scope Level
-                </label>
-                <select
-                  value={inspectScopeType}
-                  onChange={(e) => {
-                    const st = e.target.value;
-                    setInspectScopeType(st);
-                    if (st === "PROJECT") setInspectScopeId(projectId);
-                    else if (st === "ENVIRONMENT" && environments.length > 0)
-                      setInspectScopeId(environments[0].id);
-                    else if (st === "SERVICE" && services.length > 0)
-                      setInspectScopeId(services[0].id);
-                    else if (st === "RESOURCE" && resources.length > 0)
-                      setInspectScopeId(resources[0].id);
-                  }}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                >
-                  <option value="PROJECT">Project Wide</option>
-                  <option value="ENVIRONMENT">Environment Stage</option>
-                  <option value="SERVICE">Microservice</option>
-                  <option value="RESOURCE">Infrastructure Resource</option>
-                </select>
-              </div>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xs font-bold text-white uppercase tracking-wider">
+                Inspect Scope Target
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="inspect-level">Scope Level</Label>
+                  <Select
+                    id="inspect-level"
+                    value={inspectScopeType}
+                    onChange={(e) => {
+                      const st = e.target.value;
+                      setInspectScopeType(st);
+                      if (st === "PROJECT") setInspectScopeId(projectId);
+                      else if (st === "ENVIRONMENT" && environments.length > 0)
+                        setInspectScopeId(environments[0].id);
+                      else if (st === "SERVICE" && services.length > 0)
+                        setInspectScopeId(services[0].id);
+                      else if (st === "RESOURCE" && resources.length > 0)
+                        setInspectScopeId(resources[0].id);
+                    }}
+                  >
+                    <option value="PROJECT">Project Wide</option>
+                    <option value="ENVIRONMENT">Environment Stage</option>
+                    <option value="SERVICE">Microservice</option>
+                    <option value="RESOURCE">Infrastructure Resource</option>
+                  </Select>
+                </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Select Target Aggregate
-                </label>
-                {inspectScopeType === "PROJECT" ? (
-                  <div className="px-3 py-2 rounded-lg bg-slate-800/50 border border-slate-700 text-xs text-slate-300">
-                    Active Project Scope
-                  </div>
-                ) : inspectScopeType === "ENVIRONMENT" ? (
-                  <select
-                    value={inspectScopeId}
-                    onChange={(e) => setInspectScopeId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  >
-                    {environments.map((e) => (
-                      <option key={e.id} value={e.id}>
-                        {e.name} ({e.slug})
-                      </option>
-                    ))}
-                  </select>
-                ) : inspectScopeType === "SERVICE" ? (
-                  <select
-                    value={inspectScopeId}
-                    onChange={(e) => setInspectScopeId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  >
-                    {services.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} ({s.slug})
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <select
-                    value={inspectScopeId}
-                    onChange={(e) => setInspectScopeId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  >
-                    {resources.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name} ({r.slug} - {r.resource_type})
-                      </option>
-                    ))}
-                  </select>
-                )}
+                <div className="space-y-1.5">
+                  <Label htmlFor="inspect-target">Select Target Aggregate</Label>
+                  {inspectScopeType === "PROJECT" ? (
+                    <div className="flex h-9 w-full rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs text-slate-300 items-center">
+                      Active Project Scope
+                    </div>
+                  ) : inspectScopeType === "ENVIRONMENT" ? (
+                    <Select
+                      id="inspect-target"
+                      value={inspectScopeId}
+                      onChange={(e) => setInspectScopeId(e.target.value)}
+                    >
+                      {environments.map((e) => (
+                        <option key={e.id} value={e.id}>
+                          {e.name} ({e.slug})
+                        </option>
+                      ))}
+                    </Select>
+                  ) : inspectScopeType === "SERVICE" ? (
+                    <Select
+                      id="inspect-target"
+                      value={inspectScopeId}
+                      onChange={(e) => setInspectScopeId(e.target.value)}
+                    >
+                      {services.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} ({s.slug})
+                        </option>
+                      ))}
+                    </Select>
+                  ) : (
+                    <Select
+                      id="inspect-target"
+                      value={inspectScopeId}
+                      onChange={(e) => setInspectScopeId(e.target.value)}
+                    >
+                      {resources.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name} ({r.slug} - {r.resource_type})
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
               <div>
-                <h3 className="text-sm font-bold text-white">Effective Access Matrix</h3>
-                <p className="text-xs text-slate-400">
+                <CardTitle className="text-sm font-bold text-white">Effective Access Matrix</CardTitle>
+                <CardDescription>
                   Deny-by-default algorithm evaluated up the ancestor hierarchy.
-                </p>
+                </CardDescription>
               </div>
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={loadInspection}
-                className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold"
+                className="gap-1.5 text-indigo-400 hover:text-indigo-300"
               >
-                Refresh Inspector
-              </button>
-            </div>
-
-            {inspectLoading ? (
-              <div className="p-8 text-center text-xs text-slate-500">
-                Evaluating RBAC hierarchy...
-              </div>
-            ) : effectivePermissions.length === 0 ? (
-              <div className="p-8 text-center text-xs text-slate-500">
-                No users or teams have explicit or inherited access to this target scope.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 bg-slate-900/80">
-                      <th className="py-3 px-6 font-semibold">Subject</th>
-                      <th className="py-3 px-6 font-semibold">Subject Type</th>
-                      <th className="py-3 px-6 font-semibold">Effective Role</th>
-                      <th className="py-3 px-6 font-semibold">Inheritance Path</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60">
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Refresh Inspector</span>
+              </Button>
+            </CardHeader>
+            <CardContent className="p-0">
+              {inspectLoading ? (
+                <div className="p-12 text-center text-xs text-slate-500">
+                  Evaluating RBAC hierarchy...
+                </div>
+              ) : effectivePermissions.length === 0 ? (
+                <div className="p-12 text-center text-xs text-slate-500">
+                  No users or teams have explicit or inherited access to this target scope.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Subject</TableHead>
+                      <TableHead>Subject Type</TableHead>
+                      <TableHead>Effective Role</TableHead>
+                      <TableHead>Inheritance Path</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {effectivePermissions.map((ep, idx) => (
-                      <tr key={idx} className="hover:bg-slate-800/30">
-                        <td className="py-3.5 px-6 font-medium text-white">
+                      <TableRow key={idx}>
+                        <TableCell className="font-semibold text-white">
                           {ep.subject_name || ep.subject_id}
-                        </td>
-                        <td className="py-3.5 px-6 font-mono text-[10px] text-slate-400">
-                          {ep.subject_type}
-                        </td>
-                        <td className="py-3.5 px-6">
-                          <span className="font-mono font-bold text-[10px] px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-mono text-[10px]">
+                            {ep.subject_type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="default" className="font-mono text-[10px]">
                             {ep.role_name}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-6">
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
                           {ep.is_inherited ? (
-                            <span className="text-amber-400 font-medium">
+                            <Badge variant="warning" className="font-sans normal-case text-xs">
                               Inherited from {ep.source_scope || "ancestor scope"}
-                            </span>
+                            </Badge>
                           ) : (
-                            <span className="text-emerald-400 font-medium">Direct Grant</span>
+                            <Badge variant="success" className="font-sans normal-case text-xs">
+                              Direct Grant
+                            </Badge>
                           )}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {showGrantModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-white mb-1">Grant Scoped Role</h2>
-            <p className="text-xs text-slate-400 mb-4">
-              Assign a role to a squad or individual user at a specific resource scope.
-            </p>
-
-            {actionError && (
-              <div className="mb-4 p-3 rounded-lg bg-rose-950/50 border border-rose-800 text-rose-200 text-xs">
-                {actionError}
-              </div>
-            )}
-
-            <form onSubmit={handleGrant} className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Subject Type
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSubjectType("TEAM");
-                      setSubjectId("");
-                    }}
-                    className={`py-2 px-3 rounded-lg border text-xs font-semibold transition-colors ${
-                      subjectType === "TEAM"
-                        ? "bg-indigo-600/30 border-indigo-500 text-indigo-200"
-                        : "bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200"
-                    }`}
-                  >
-                    Engineering Squad
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSubjectType("USER");
-                      setSubjectId("");
-                    }}
-                    className={`py-2 px-3 rounded-lg border text-xs font-semibold transition-colors ${
-                      subjectType === "USER"
-                        ? "bg-indigo-600/30 border-indigo-500 text-indigo-200"
-                        : "bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200"
-                    }`}
-                  >
-                    Individual User
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Select {subjectType === "TEAM" ? "Squad" : "User"}
-                </label>
-                <select
-                  required
-                  value={subjectId}
-                  onChange={(e) => setSubjectId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                >
-                  <option value="">Select subject...</option>
-                  {subjectType === "TEAM"
-                    ? teams.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name} ({t.slug})
-                        </option>
-                      ))
-                    : users.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.full_name} ({u.email})
-                        </option>
-                      ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Role</label>
-                <select
-                  value={roleName}
-                  onChange={(e) =>
-                    setRoleName(
-                      e.target.value as
-                        | "ORG_ADMIN"
-                        | "ENV_ADMIN"
-                        | "SERVICE_LEAD"
-                        | "DEVELOPER"
-                        | "VIEWER"
-                    )
-                  }
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                >
-                  <option value="DEVELOPER">DEVELOPER</option>
-                  <option value="SERVICE_LEAD">SERVICE_LEAD</option>
-                  <option value="ENV_ADMIN">ENV_ADMIN</option>
-                  <option value="VIEWER">VIEWER</option>
-                  <option value="ORG_ADMIN">ORG_ADMIN</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Scope Target
-                </label>
-                <select
-                  value={scopeType}
-                  onChange={(e) => {
-                    const st = e.target.value as "PROJECT" | "ENVIRONMENT" | "SERVICE" | "RESOURCE";
-                    setScopeType(st);
-                    if (st === "PROJECT") setScopeId(projectId);
-                    else if (st === "ENVIRONMENT" && environments.length > 0)
-                      setScopeId(environments[0].id);
-                    else if (st === "SERVICE" && services.length > 0)
-                      setScopeId(services[0].id);
-                    else if (st === "RESOURCE" && resources.length > 0)
-                      setScopeId(resources[0].id);
-                  }}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                >
-                  <option value="PROJECT">Project Wide</option>
-                  <option value="ENVIRONMENT">Environment</option>
-                  <option value="SERVICE">Specific Microservice</option>
-                  <option value="RESOURCE">Specific Resource</option>
-                </select>
-              </div>
-
-              {scopeType !== "PROJECT" && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Select Specific Resource
-                  </label>
-                  <select
-                    value={scopeId}
-                    onChange={(e) => setScopeId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  >
-                    {scopeType === "ENVIRONMENT" &&
-                      environments.map((env) => (
-                        <option key={env.id} value={env.id}>
-                          {env.name} ({env.slug})
-                        </option>
-                      ))}
-                    {scopeType === "SERVICE" &&
-                      services.map((svc) => (
-                        <option key={svc.id} value={svc.id}>
-                          {svc.name} ({svc.slug})
-                        </option>
-                      ))}
-                    {scopeType === "RESOURCE" &&
-                      resources.map((res) => (
-                        <option key={res.id} value={res.id}>
-                          {res.name} ({res.slug})
-                        </option>
-                      ))}
-                  </select>
-                </div>
+                  </TableBody>
+                </Table>
               )}
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowGrantModal(false)}
-                  className="px-3 py-2 text-xs text-slate-400 hover:text-slate-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !subjectId}
-                  className="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50"
-                >
-                  {isSubmitting ? "Granting..." : "Grant Binding"}
-                </button>
-              </div>
-            </form>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       )}
+
+      <Dialog
+        open={showGrantModal}
+        onOpenChange={setShowGrantModal}
+        title="Grant Scoped Role"
+        description="Assign a role to a squad or individual user at a specific resource scope."
+      >
+        {actionError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{actionError}</AlertDescription>
+          </Alert>
+        )}
+
+        <form onSubmit={handleGrant} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="grant-subject-type">Subject Type</Label>
+            <Select
+              id="grant-subject-type"
+              value={subjectType}
+              onChange={(e) => {
+                setSubjectType(e.target.value as "USER" | "TEAM");
+                setSubjectId("");
+              }}
+            >
+              <option value="TEAM">Engineering Squad</option>
+              <option value="USER">Individual User</option>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="grant-subject">
+              Select {subjectType === "TEAM" ? "Squad" : "User"}
+            </Label>
+            <Select
+              id="grant-subject"
+              required
+              value={subjectId}
+              onChange={(e) => setSubjectId(e.target.value)}
+            >
+              <option value="">Select subject...</option>
+              {subjectType === "TEAM"
+                ? teams.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.slug})
+                    </option>
+                  ))
+                : users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.full_name} ({u.email})
+                    </option>
+                  ))}
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="grant-role">Role</Label>
+            <Select
+              id="grant-role"
+              value={roleName}
+              onChange={(e) =>
+                setRoleName(
+                  e.target.value as
+                    | "ORG_ADMIN"
+                    | "ENV_ADMIN"
+                    | "SERVICE_LEAD"
+                    | "DEVELOPER"
+                    | "VIEWER"
+                )
+              }
+            >
+              <option value="DEVELOPER">DEVELOPER</option>
+              <option value="SERVICE_LEAD">SERVICE_LEAD</option>
+              <option value="ENV_ADMIN">ENV_ADMIN</option>
+              <option value="VIEWER">VIEWER</option>
+              <option value="ORG_ADMIN">ORG_ADMIN</option>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="grant-scope">Scope Target</Label>
+            <Select
+              id="grant-scope"
+              value={scopeType}
+              onChange={(e) => {
+                const st = e.target.value as "PROJECT" | "ENVIRONMENT" | "SERVICE" | "RESOURCE";
+                setScopeType(st);
+                if (st === "PROJECT") setScopeId(projectId);
+                else if (st === "ENVIRONMENT" && environments.length > 0)
+                  setScopeId(environments[0].id);
+                else if (st === "SERVICE" && services.length > 0)
+                  setScopeId(services[0].id);
+                else if (st === "RESOURCE" && resources.length > 0)
+                  setScopeId(resources[0].id);
+              }}
+            >
+              <option value="PROJECT">Project Wide</option>
+              <option value="ENVIRONMENT">Environment</option>
+              <option value="SERVICE">Specific Microservice</option>
+              <option value="RESOURCE">Specific Resource</option>
+            </Select>
+          </div>
+
+          {scopeType !== "PROJECT" && (
+            <div className="space-y-1.5">
+              <Label htmlFor="grant-scope-id">Select Specific Resource</Label>
+              <Select
+                id="grant-scope-id"
+                value={scopeId}
+                onChange={(e) => setScopeId(e.target.value)}
+              >
+                {scopeType === "ENVIRONMENT" &&
+                  environments.map((env) => (
+                    <option key={env.id} value={env.id}>
+                      {env.name} ({env.slug})
+                    </option>
+                  ))}
+                {scopeType === "SERVICE" &&
+                  services.map((svc) => (
+                    <option key={svc.id} value={svc.id}>
+                      {svc.name} ({svc.slug})
+                    </option>
+                  ))}
+                {scopeType === "RESOURCE" &&
+                  resources.map((res) => (
+                    <option key={res.id} value={res.id}>
+                      {res.name} ({res.slug})
+                    </option>
+                  ))}
+              </Select>
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowGrantModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting || !subjectId}
+              size="sm"
+            >
+              {isSubmitting ? "Granting..." : "Grant Role"}
+            </Button>
+          </div>
+        </form>
+      </Dialog>
     </div>
   );
 }
