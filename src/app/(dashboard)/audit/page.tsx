@@ -85,11 +85,11 @@ export default function AuditPage() {
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
-            <FileText className="w-6 h-6 text-indigo-400" />
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-2.5">
+            <FileText className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
             <span>Immutable Audit Trail</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
             Cryptographically sealed SHA-256 hash-chained telemetry for zero-trust compliance.
           </p>
         </div>
@@ -97,12 +97,12 @@ export default function AuditPage() {
         <Button
           onClick={handleVerifyChain}
           disabled={isVerifying}
-          variant="success"
-          className="gap-2 shadow-emerald-950/50"
+          variant="default"
+          className="gap-2"
         >
           {isVerifying ? (
             <>
-              <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <div className="w-3.5 h-3.5 border-2 border-white dark:border-zinc-900 border-t-transparent rounded-full animate-spin" />
               <span>Verifying Hash Chain...</span>
             </>
           ) : (
@@ -117,7 +117,7 @@ export default function AuditPage() {
       {verifyResult && (
         <Alert
           variant={verifyResult.verified ? "success" : "destructive"}
-          className="flex items-center justify-between p-4"
+          className="flex items-center justify-between p-4 rounded-2xl"
         >
           <div className="flex items-center gap-3">
             <div
@@ -147,6 +147,7 @@ export default function AuditPage() {
           </div>
 
           <Button
+            type="button"
             variant="ghost"
             size="sm"
             onClick={() => setVerifyResult(null)}
@@ -185,12 +186,12 @@ export default function AuditPage() {
         </Select>
       </div>
 
-      <Card>
+      <Card className="rounded-3xl overflow-hidden">
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-12 text-center text-xs text-slate-500">Loading audit trail...</div>
+            <div className="p-12 text-center text-xs text-zinc-500">Loading audit trail...</div>
           ) : logs.length === 0 ? (
-            <div className="p-12 text-center text-xs text-slate-500">
+            <div className="p-12 text-center text-xs text-zinc-500">
               No audit logs matched query criteria.
             </div>
           ) : (
@@ -208,32 +209,33 @@ export default function AuditPage() {
               <TableBody>
                 {logs.map((log) => (
                   <TableRow key={log.id}>
-                    <TableCell className="font-mono font-medium text-slate-200">
+                    <TableCell className="font-mono font-medium text-zinc-900 dark:text-zinc-100">
                       {log.action}
                     </TableCell>
                     <TableCell>
-                      <span className="font-semibold text-white">{log.target_type}</span>
-                      <span className="block font-mono text-[11px] text-slate-400">
+                      <span className="font-semibold text-zinc-900 dark:text-white">{log.target_type}</span>
+                      <span className="block font-mono text-[11px] text-zinc-500">
                         {log.target_slug || (log.target_id ? log.target_id.slice(0, 8) : "—")}
                       </span>
                     </TableCell>
-                    <TableCell className="font-mono text-[11px] text-slate-400">
+                    <TableCell className="font-mono text-[11px] text-zinc-500">
                       {(log.actor_user_id || log.actor_id || log.actor_type || "SYSTEM").slice(0, 12)}...
                     </TableCell>
-                    <TableCell className="text-slate-500 text-[11px] font-mono">
+                    <TableCell className="text-zinc-500 text-[11px] font-mono">
                       {new Date(log.created_at).toLocaleString()}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="success" className="font-mono">
+                      <Badge variant="outline" className="font-mono">
                         {(log.entry_hash || "—").slice(0, 16)}...
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
+                        type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => setSelectedLog(log)}
-                        className="text-indigo-400 hover:text-indigo-300 font-semibold h-8"
+                        className="text-zinc-900 dark:text-white hover:underline underline-offset-4 font-semibold h-8"
                       >
                         <span>Inspect &rarr;</span>
                       </Button>
@@ -260,40 +262,40 @@ export default function AuditPage() {
       >
         {selectedLog && (
           <div className="space-y-4 text-xs">
-            <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-              <span className="text-[10px] uppercase font-bold text-slate-500 block font-mono">
+            <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2">
+              <span className="text-[10px] uppercase font-bold text-zinc-400 block font-mono">
                 Cryptographic Hash Linkages
               </span>
               <div>
-                <span className="text-slate-400 block font-semibold">Previous Block Hash:</span>
-                <span className="font-mono text-slate-300 text-[11px] break-all">
+                <span className="text-zinc-500 dark:text-zinc-400 block font-semibold">Previous Block Hash:</span>
+                <span className="font-mono text-zinc-700 dark:text-zinc-300 text-[11px] break-all">
                   {selectedLog.prev_hash}
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 block font-semibold">Entry SHA-256 Hash:</span>
-                <span className="font-mono text-emerald-400 text-[11px] break-all">
+                <span className="text-zinc-500 dark:text-zinc-400 block font-semibold">Entry SHA-256 Hash:</span>
+                <span className="font-mono text-emerald-600 dark:text-emerald-400 text-[11px] break-all">
                   {selectedLog.entry_hash}
                 </span>
               </div>
             </div>
 
             <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5 font-mono">
+              <span className="text-[10px] uppercase font-bold text-zinc-400 block mb-1.5 font-mono">
                 Metadata Payload
               </span>
-              <pre className="p-3 rounded-xl bg-slate-950 border border-slate-800 font-mono text-[11px] text-slate-300 overflow-x-auto max-h-56">
+              <pre className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 font-mono text-[11px] text-zinc-800 dark:text-zinc-200 overflow-x-auto max-h-56">
                 {JSON.stringify(selectedLog.metadata, null, 2)}
               </pre>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-[11px] text-slate-400 pt-3 border-t border-slate-800">
+            <div className="grid grid-cols-2 gap-3 text-[11px] text-zinc-500 pt-3 border-t border-zinc-100 dark:border-zinc-800">
               <div>
-                <span className="font-semibold block text-slate-300">Target ID:</span>
+                <span className="font-semibold block text-zinc-700 dark:text-zinc-300">Target ID:</span>
                 <span className="font-mono">{selectedLog.target_id}</span>
               </div>
               <div>
-                <span className="font-semibold block text-slate-300">Actor Principal:</span>
+                <span className="font-semibold block text-zinc-700 dark:text-zinc-300">Actor Principal:</span>
                 <span className="font-mono">
                   {selectedLog.actor_user_id || selectedLog.actor_id || selectedLog.actor_type || "SYSTEM"}
                 </span>

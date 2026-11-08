@@ -94,11 +94,11 @@ export default function TeamsPage() {
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
-            <Users className="w-6 h-6 text-indigo-400" />
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-2.5">
+            <Users className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
             <span>Teams</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
             Squad-level microservice and resource ownership boundaries.
           </p>
         </div>
@@ -112,12 +112,12 @@ export default function TeamsPage() {
         </Button>
       </div>
 
-      <Card>
+      <Card className="rounded-3xl overflow-hidden">
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-12 text-center text-xs text-slate-500">Loading squads...</div>
+            <div className="p-12 text-center text-xs text-zinc-500">Loading squads...</div>
           ) : teams.length === 0 ? (
-            <div className="p-12 text-center text-xs text-slate-500">
+            <div className="p-12 text-center text-xs text-zinc-500">
               No teams created yet. Click &quot;+ Create Team&quot; to get started.
             </div>
           ) : (
@@ -135,13 +135,13 @@ export default function TeamsPage() {
               <TableBody>
                 {teams.map((team) => (
                   <TableRow key={team.id}>
-                    <TableCell className="font-semibold text-white">
+                    <TableCell className="font-semibold text-zinc-900 dark:text-white">
                       {team.name}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{team.slug}</Badge>
                     </TableCell>
-                    <TableCell className="text-slate-400 max-w-xs truncate">
+                    <TableCell className="text-zinc-500 dark:text-zinc-400 max-w-xs truncate">
                       {team.description || "—"}
                     </TableCell>
                     <TableCell>
@@ -149,13 +149,13 @@ export default function TeamsPage() {
                         {team.member_count} {team.member_count === 1 ? "member" : "members"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-slate-500 text-[11px] font-mono">
+                    <TableCell className="text-zinc-500 text-[11px] font-mono">
                       {new Date(team.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right">
                       <Link
                         href={`/teams/${team.id}`}
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-zinc-900 dark:text-white hover:underline underline-offset-4 transition-colors"
                       >
                         <span>Manage</span>
                         <ArrowUpRight className="w-3.5 h-3.5" />
@@ -213,11 +213,11 @@ export default function TeamsPage() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Owns checkout, billing, and fraud detection microservices"
-              className="flex w-full rounded-xl border border-slate-800 bg-slate-900/90 px-3 py-2 text-xs text-white shadow-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 font-sans"
+              className="flex w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 px-3 py-2 text-xs text-zinc-900 dark:text-white shadow-xs placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-900 focus-visible:border-zinc-900 font-sans"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
             <Button
               type="button"
               variant="ghost"

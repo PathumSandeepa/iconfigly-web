@@ -50,10 +50,10 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-64 border-r border-slate-800/80 bg-slate-950/60 backdrop-blur-sm min-h-[calc(100vh-4rem)] p-4 flex flex-col justify-between shrink-0">
+    <aside className="w-64 bg-[#18181b] text-zinc-300 border-r border-zinc-800 min-h-[calc(100vh-4rem)] p-4 flex flex-col justify-between shrink-0">
       <div className="space-y-6">
         <div>
-          <span className="block px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2 font-mono">
+          <span className="block px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2 font-mono">
             Organization
           </span>
           <nav className="space-y-1">
@@ -67,11 +67,11 @@ export function Sidebar() {
                   className={cn(
                     "flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all",
                     active
-                      ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 font-semibold shadow-sm"
-                      : "text-slate-400 hover:text-slate-100 hover:bg-slate-900/60"
+                      ? "bg-white/10 text-white font-semibold"
+                      : "text-zinc-400 hover:text-white hover:bg-white/5"
                   )}
                 >
-                  <Icon className={cn("w-4 h-4", active ? "text-indigo-400" : "text-slate-500")} />
+                  <Icon className={cn("w-4 h-4", active ? "text-white" : "text-zinc-500")} />
                   <span>{link.label}</span>
                 </Link>
               );
@@ -80,7 +80,7 @@ export function Sidebar() {
         </div>
 
         <div>
-          <span className="block px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2 font-mono">
+          <span className="block px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2 font-mono">
             Project Catalog
           </span>
           {projId ? (
@@ -95,25 +95,25 @@ export function Sidebar() {
                     className={cn(
                       "flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all",
                       active
-                        ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 font-semibold shadow-sm"
-                        : "text-slate-400 hover:text-slate-100 hover:bg-slate-900/60"
+                        ? "bg-white/10 text-white font-semibold"
+                        : "text-zinc-400 hover:text-white hover:bg-white/5"
                     )}
                   >
-                    <Icon className={cn("w-4 h-4", active ? "text-indigo-400" : "text-slate-500")} />
+                    <Icon className={cn("w-4 h-4", active ? "text-white" : "text-zinc-500")} />
                     <span>{link.label}</span>
                   </Link>
                 );
               })}
             </nav>
           ) : (
-            <div className="px-3 py-2.5 rounded-xl bg-slate-900/50 border border-slate-800/80 text-[11px] text-slate-500 leading-relaxed">
+            <div className="px-3 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-[11px] text-zinc-500 leading-relaxed font-sans">
               Select or create a project to manage microservices and resources.
             </div>
           )}
         </div>
 
         <div>
-          <span className="block px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2 font-mono">
+          <span className="block px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-2 font-mono">
             Governance & Security
           </span>
           <nav className="space-y-1">
@@ -127,11 +127,11 @@ export function Sidebar() {
                   className={cn(
                     "flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all",
                     active
-                      ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 font-semibold shadow-sm"
-                      : "text-slate-400 hover:text-slate-100 hover:bg-slate-900/60"
+                      ? "bg-white/10 text-white font-semibold"
+                      : "text-zinc-400 hover:text-white hover:bg-white/5"
                   )}
                 >
-                  <Icon className={cn("w-4 h-4", active ? "text-indigo-400" : "text-slate-500")} />
+                  <Icon className={cn("w-4 h-4", active ? "text-white" : "text-zinc-500")} />
                   <span>{link.label}</span>
                 </Link>
               );
@@ -140,11 +140,11 @@ export function Sidebar() {
         </div>
       </div>
 
-      <div className="pt-4 border-t border-slate-800/80 px-2 text-[10px] text-slate-500 flex items-center justify-between font-mono">
-        <span>iconfigly v1.0-alpha</span>
+      <div className="pt-4 border-t border-zinc-800 px-2 text-[10px] text-zinc-500 flex items-center justify-between font-mono">
+        <span>iconfigly v1.0</span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-emerald-500 text-[10px]">online</span>
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-emerald-400 text-[10px]">online</span>
         </span>
       </div>
     </aside>

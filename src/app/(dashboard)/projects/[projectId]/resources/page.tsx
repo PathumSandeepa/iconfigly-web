@@ -152,11 +152,11 @@ export default function ResourcesPage({
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
-            <Database className="w-6 h-6 text-indigo-400" />
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-2.5">
+            <Database className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
             <span>Infrastructure Resources</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
             Databases, caches, message brokers, and cloud backends bound to runtime stages.
           </p>
         </div>
@@ -200,12 +200,12 @@ export default function ResourcesPage({
         </Select>
       </div>
 
-      <Card>
+      <Card className="rounded-3xl overflow-hidden">
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-12 text-center text-xs text-slate-500">Loading infrastructure...</div>
+            <div className="p-12 text-center text-xs text-zinc-500">Loading infrastructure...</div>
           ) : resources.length === 0 ? (
-            <div className="p-12 text-center text-xs text-slate-500">
+            <div className="p-12 text-center text-xs text-zinc-500">
               No infrastructure resources cataloged. Click &quot;+ Provision Resource&quot; to register backends.
             </div>
           ) : (
@@ -224,7 +224,7 @@ export default function ResourcesPage({
               <TableBody>
                 {resources.map((res) => (
                   <TableRow key={res.id}>
-                    <TableCell className="font-semibold text-white">
+                    <TableCell className="font-semibold text-zinc-900 dark:text-white">
                       {res.name}
                     </TableCell>
                     <TableCell>
@@ -251,10 +251,10 @@ export default function ResourcesPage({
                         </span>
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-slate-400 font-mono text-[11px]">
+                    <TableCell className="text-zinc-500 dark:text-zinc-400 font-mono text-[11px]">
                       v{res.version}
                     </TableCell>
-                    <TableCell className="text-slate-500 text-[11px] font-mono text-right">
+                    <TableCell className="text-zinc-500 text-[11px] font-mono text-right">
                       {new Date(res.created_at).toLocaleDateString()}
                     </TableCell>
                   </TableRow>
@@ -361,11 +361,11 @@ export default function ResourcesPage({
               rows={3}
               value={metadataJson}
               onChange={(e) => setMetadataJson(e.target.value)}
-              className="flex w-full rounded-xl border border-slate-800 bg-slate-900/90 px-3 py-2 text-xs text-white shadow-sm font-mono placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
+              className="flex w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 px-3 py-2 text-xs text-zinc-900 dark:text-white shadow-xs font-mono placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-900 focus-visible:border-zinc-900"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
             <Button
               type="button"
               variant="ghost"

@@ -112,11 +112,11 @@ export default function TokensPage() {
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
-            <KeyRound className="w-6 h-6 text-indigo-400" />
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-2.5">
+            <KeyRound className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
             <span>Personal Access Tokens (PAT)</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
             Programmatic bearer tokens for CLI tooling and automated CI/CD runners.
           </p>
         </div>
@@ -131,17 +131,17 @@ export default function TokensPage() {
       </div>
 
       {createdRawToken && (
-        <Alert variant="warning" className="border-amber-700/80 bg-amber-950/40">
-          <ShieldAlert className="w-4 h-4 text-amber-400" />
+        <Alert variant="warning" className="border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 rounded-2xl">
+          <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400" />
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <span className="font-bold text-amber-300 block text-xs">
+              <span className="font-bold text-amber-900 dark:text-amber-200 block text-xs">
                 Copy your personal access token now.
               </span>
-              <span className="text-[11px] text-amber-200/80 block mt-0.5">
+              <span className="text-[11px] text-amber-700 dark:text-amber-300/80 block mt-0.5">
                 For security reasons, this token will never be displayed again.
               </span>
-              <code className="block mt-2 p-2 rounded-lg bg-black/60 font-mono text-xs text-emerald-300 break-all border border-amber-900/60 select-all">
+              <code className="block mt-2 p-2 rounded-xl bg-zinc-900 text-white dark:bg-zinc-950 font-mono text-xs text-emerald-400 break-all select-all">
                 {createdRawToken}
               </code>
             </div>
@@ -150,16 +150,16 @@ export default function TokensPage() {
                 variant="outline"
                 size="sm"
                 onClick={handleCopy}
-                className="gap-1.5 border-amber-800 text-amber-300 hover:bg-amber-900/50"
+                className="gap-1.5"
               >
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>{copied ? "Copied!" : "Copy"}</span>
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setCreatedRawToken(null)}
-                className="text-amber-400 hover:text-white"
+                className="text-xs"
               >
                 Dismiss
               </Button>
@@ -168,12 +168,12 @@ export default function TokensPage() {
         </Alert>
       )}
 
-      <Card>
+      <Card className="rounded-3xl overflow-hidden">
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-12 text-center text-xs text-slate-500">Loading tokens...</div>
+            <div className="p-12 text-center text-xs text-zinc-500">Loading tokens...</div>
           ) : tokens.length === 0 ? (
-            <div className="p-12 text-center text-xs text-slate-500">
+            <div className="p-12 text-center text-xs text-zinc-500">
               No personal access tokens generated. Click &quot;+ Generate Token&quot; to create a CLI token.
             </div>
           ) : (
@@ -194,7 +194,7 @@ export default function TokensPage() {
                   const isExpired = token.expires_at && new Date(token.expires_at) < new Date();
                   return (
                     <TableRow key={token.id}>
-                      <TableCell className="font-semibold text-white">
+                      <TableCell className="font-semibold text-zinc-900 dark:text-white">
                         {token.name}
                       </TableCell>
                       <TableCell>
@@ -211,10 +211,10 @@ export default function TokensPage() {
                           <Badge variant="success">Active</Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-slate-400 text-[11px] font-mono">
+                      <TableCell className="text-zinc-500 text-[11px] font-mono">
                         {token.expires_at ? new Date(token.expires_at).toLocaleDateString() : "Never"}
                       </TableCell>
-                      <TableCell className="text-slate-500 text-[11px] font-mono">
+                      <TableCell className="text-zinc-500 text-[11px] font-mono">
                         {new Date(token.created_at).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="text-right">
@@ -223,7 +223,7 @@ export default function TokensPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleRevoke(token.id)}
-                            className="text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 h-8"
+                            className="text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 h-8"
                           >
                             <Trash2 className="w-3.5 h-3.5 mr-1" />
                             <span>Revoke</span>
@@ -278,7 +278,7 @@ export default function TokensPage() {
             </Select>
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
             <Button
               type="button"
               variant="ghost"

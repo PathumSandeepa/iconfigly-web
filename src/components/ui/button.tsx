@@ -3,24 +3,24 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98] select-none cursor-pointer",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 dark:focus-visible:ring-zinc-100 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98] select-none cursor-pointer",
   {
     variants: {
       variant: {
         default:
-          "bg-indigo-600 text-white shadow-md shadow-indigo-950/50 hover:bg-indigo-500 hover:shadow-indigo-900/60",
+          "bg-zinc-900 text-white hover:bg-black dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 shadow-xs",
         destructive:
-          "bg-rose-600 text-white shadow-md shadow-rose-950/50 hover:bg-rose-500",
+          "bg-rose-600 text-white hover:bg-rose-700 shadow-xs",
         outline:
-          "border border-slate-800 bg-slate-900/80 text-slate-200 hover:bg-slate-800 hover:text-white hover:border-slate-700",
+          "border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white shadow-xs",
         secondary:
-          "bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white",
+          "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700",
         ghost:
-          "text-slate-400 hover:bg-slate-800/60 hover:text-white",
+          "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white",
         link:
-          "text-indigo-400 underline-offset-4 hover:underline p-0 h-auto",
+          "text-zinc-900 dark:text-zinc-100 underline-offset-4 hover:underline p-0 h-auto",
         success:
-          "bg-emerald-600 text-white shadow-md shadow-emerald-950/50 hover:bg-emerald-500",
+          "bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs",
       },
       size: {
         default: "h-9 px-4 py-2",

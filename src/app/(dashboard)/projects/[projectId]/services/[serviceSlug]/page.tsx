@@ -135,7 +135,7 @@ export default function ServiceContextPage({
     setIsSubmitting(true);
     try {
       const selectedResource = availableResources.find((r) => r.id === bindResourceId);
-      const currentEnv = environments.find((e) => e.slug === selectedEnvSlug);
+      const currentEnv = environments.find((envItem) => envItem.slug === selectedEnvSlug);
       const targetEnvId =
         selectedResource?.environment_id ||
         context?.environment?.id ||
@@ -230,45 +230,43 @@ export default function ServiceContextPage({
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center gap-2 text-xs text-slate-400">
+      <div className="flex items-center gap-2 text-xs text-zinc-500">
         <Link
           href={`/projects/${projectId}/services`}
-          className="hover:text-white transition-colors inline-flex items-center gap-1"
+          className="hover:text-zinc-900 dark:hover:text-white transition-colors inline-flex items-center gap-1"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Microservices</span>
         </Link>
         <span>/</span>
-        <span className="text-slate-200 font-medium font-mono">{serviceSlug}</span>
+        <span className="text-zinc-900 dark:text-zinc-200 font-medium font-mono">{serviceSlug}</span>
       </div>
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
-              <Cpu className="w-6 h-6 text-indigo-400" />
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-2.5">
+              <Cpu className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
               <span>{context?.service?.name || serviceSlug}</span>
             </h1>
             <Badge variant="outline" className="font-mono">
               {serviceSlug}
             </Badge>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
             Single-Pane Service Context: runtime dependencies, ownership, and effective permissions.
           </p>
         </div>
 
-        <div className="flex items-center p-1 rounded-xl bg-slate-900 border border-slate-800 self-start md:self-auto overflow-x-auto">
+        <div className="flex items-center p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 self-start md:self-auto overflow-x-auto">
           {environments.map((env) => (
             <button
               key={env.id}
               onClick={() => setSelectedEnvSlug(env.slug)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
                 selectedEnvSlug === env.slug
-                  ? env.is_production
-                    ? "bg-rose-600 text-white shadow-md shadow-rose-950"
-                    : "bg-indigo-600 text-white shadow-md shadow-indigo-950"
-                  : "text-slate-400 hover:text-slate-200"
+                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-xs"
+                  : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
               }`}
             >
               {env.name}
@@ -278,34 +276,34 @@ export default function ServiceContextPage({
       </div>
 
       {loading ? (
-        <div className="py-16 text-center text-xs text-slate-500">
+        <div className="py-16 text-center text-xs text-zinc-500">
           Assembling single-pane context view...
         </div>
       ) : !context ? (
-        <div className="py-16 text-center text-xs text-slate-400">
+        <div className="py-16 text-center text-xs text-zinc-500">
           Service context could not be resolved for stage &quot;{selectedEnvSlug}&quot;.
         </div>
       ) : (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="p-4">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block font-mono">
+            <Card className="p-5 rounded-3xl">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 block font-mono">
                 Owner Team
               </span>
-              <div className="font-semibold text-white mt-1 text-sm">
+              <div className="font-semibold text-zinc-900 dark:text-white mt-1 text-sm">
                 {context.owner_team?.name || "Unassigned"}
               </div>
-              <span className="text-xs text-slate-400 font-mono">
+              <span className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
                 {context.owner_team?.slug}
               </span>
             </Card>
 
-            <Card className="p-4">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block font-mono">
+            <Card className="p-5 rounded-3xl">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 block font-mono">
                 Active Stage
               </span>
               <div className="flex items-center gap-2 mt-1">
-                <span className="font-semibold text-white text-sm">
+                <span className="font-semibold text-zinc-900 dark:text-white text-sm">
                   {context.environment?.name}
                 </span>
                 {context.environment?.is_production ? (
@@ -316,8 +314,8 @@ export default function ServiceContextPage({
               </div>
             </Card>
 
-            <Card className="p-4">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block font-mono">
+            <Card className="p-5 rounded-3xl">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 block font-mono">
                 Effective RBAC Role
               </span>
               <div className="mt-1">
@@ -327,37 +325,37 @@ export default function ServiceContextPage({
               </div>
             </Card>
 
-            <Card className="p-4">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block font-mono">
+            <Card className="p-5 rounded-3xl">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 block font-mono">
                 Audit Checkpoint
               </span>
-              <div className="mt-1 text-xs text-slate-300">
+              <div className="mt-1 text-xs text-zinc-700 dark:text-zinc-300">
                 {context.latest_audit_entry || context.last_activity ? (
                   <>
-                    <span className="font-mono text-indigo-400 font-medium">
+                    <span className="font-mono font-medium text-zinc-900 dark:text-zinc-100">
                       {(context.latest_audit_entry || context.last_activity)?.action}
                     </span>
-                    <span className="block text-[11px] text-slate-500 mt-0.5 font-mono">
+                    <span className="block text-[11px] text-zinc-500 mt-0.5 font-mono">
                       {new Date(
                         (context.latest_audit_entry || context.last_activity)!.timestamp
                       ).toLocaleString()}
                     </span>
                   </>
                 ) : (
-                  <span className="text-slate-500">No recorded changes</span>
+                  <span className="text-zinc-500">No recorded changes</span>
                 )}
               </div>
             </Card>
           </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-4">
+          <Card className="rounded-3xl overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between p-6 pb-4">
               <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Database className="w-4 h-4 text-indigo-400" />
+                <CardTitle className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                  <Database className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />
                   <span>Bound Infrastructure Dependencies ({context.bound_resources?.length || 0})</span>
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                   Shared databases, caches, and streaming brokers bound in {context.environment.name}.
                 </CardDescription>
               </div>
@@ -375,7 +373,7 @@ export default function ServiceContextPage({
             </CardHeader>
             <CardContent className="p-0">
               {!context.bound_resources || context.bound_resources.length === 0 ? (
-                <div className="p-12 text-center text-xs text-slate-500">
+                <div className="p-12 text-center text-xs text-zinc-500">
                   No infrastructure resources bound to {context.service.name} in this stage.
                 </div>
               ) : (
@@ -393,8 +391,8 @@ export default function ServiceContextPage({
                     {(context.bound_resources || []).map((res) => (
                       <TableRow key={res.binding_id}>
                         <TableCell>
-                          <div className="font-semibold text-white">{res.resource_name || res.name}</div>
-                          <span className="font-mono text-[11px] text-slate-400">
+                          <div className="font-semibold text-zinc-900 dark:text-white">{res.resource_name || res.name}</div>
+                          <span className="font-mono text-[11px] text-zinc-500">
                             {res.resource_slug || res.slug}
                           </span>
                         </TableCell>
@@ -410,7 +408,7 @@ export default function ServiceContextPage({
                             {res.access_mode}
                           </Badge>
                         </TableCell>
-                        <TableCell className="font-mono text-[11px] text-slate-400 max-w-xs truncate">
+                        <TableCell className="font-mono text-[11px] text-zinc-500 max-w-xs truncate">
                           {JSON.stringify(res.connection_metadata || {})}
                         </TableCell>
                         <TableCell className="text-right">
@@ -418,7 +416,7 @@ export default function ServiceContextPage({
                             variant="ghost"
                             size="sm"
                             onClick={() => handleRemoveBinding(res.binding_id)}
-                            className="text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 h-8"
+                            className="text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 h-8"
                           >
                             <Trash2 className="w-3.5 h-3.5 mr-1" />
                             <span>Unbind</span>
@@ -432,14 +430,14 @@ export default function ServiceContextPage({
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-4">
+          <Card className="rounded-3xl overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between p-6 pb-4">
               <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Network className="w-4 h-4 text-indigo-400" />
+                <CardTitle className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                  <Network className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />
                   <span>Microservice Dependencies ({dependencies.length})</span>
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                   Upstream callers and downstream RPC/HTTP/Event endpoints in {context.environment.name}.
                 </CardDescription>
               </div>
@@ -458,7 +456,7 @@ export default function ServiceContextPage({
             </CardHeader>
             <CardContent className="p-0">
               {dependencies.length === 0 ? (
-                <div className="p-12 text-center text-xs text-slate-500">
+                <div className="p-12 text-center text-xs text-zinc-500">
                   No upstream or downstream service dependencies mapped in this stage.
                 </div>
               ) : (
@@ -476,15 +474,15 @@ export default function ServiceContextPage({
                       <TableRow key={dep.dependency_id}>
                         <TableCell>
                           <Badge
-                            variant={dep.direction === "UPSTREAM" ? "info" : "default"}
+                            variant="secondary"
                             className="font-mono text-[10px]"
                           >
                             {dep.direction === "UPSTREAM" ? "Caller → Us" : "Us → Callee"}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="font-semibold text-white">{dep.service_name}</div>
-                          <span className="font-mono text-[11px] text-slate-400">
+                          <div className="font-semibold text-zinc-900 dark:text-white">{dep.service_name}</div>
+                          <span className="font-mono text-[11px] text-zinc-500">
                             {dep.service_slug}
                           </span>
                         </TableCell>
@@ -493,7 +491,7 @@ export default function ServiceContextPage({
                             {dep.protocol}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-slate-500 text-[11px] font-mono text-right">
+                        <TableCell className="text-zinc-500 text-[11px] font-mono text-right">
                           {dep.created_at ? new Date(dep.created_at).toLocaleDateString() : "—"}
                         </TableCell>
                       </TableRow>
@@ -548,7 +546,7 @@ export default function ServiceContextPage({
             </Select>
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
             <Button
               type="button"
               variant="ghost"
@@ -614,7 +612,7 @@ export default function ServiceContextPage({
             </Select>
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
             <Button
               type="button"
               variant="ghost"
