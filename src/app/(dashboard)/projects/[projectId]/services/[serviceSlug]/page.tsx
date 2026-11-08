@@ -9,6 +9,22 @@ import {
   ResourceEntity,
   ServiceEntity,
 } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Dialog } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Cpu, Database, Plus, Network, ArrowLeft, Trash2 } from "lucide-react";
 
 export default function ServiceContextPage({
   params,
@@ -35,24 +51,28 @@ export default function ServiceContextPage({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    async function loadEnvs() {
+    let mounted = true;
+    void (async () => {
       try {
         const envs = await apiFetch<Environment[]>(`/projects/${projectId}/environments`);
         const list = Array.isArray(envs) ? envs : [];
-        setEnvironments(list);
-        if (list.length > 0 && !selectedEnvSlug) {
-          setSelectedEnvSlug(list[0].slug);
+        if (mounted) {
+          setEnvironments(list);
+          if (list.length > 0 && !selectedEnvSlug) {
+            setSelectedEnvSlug(list[0].slug);
+          }
         }
       } catch {
-        setEnvironments([]);
+        if (mounted) setEnvironments([]);
       }
-    }
-    loadEnvs();
+    })();
+    return () => {
+      mounted = false;
+    };
   }, [projectId, selectedEnvSlug]);
 
-  const loadContext = async () => {
+  const fetchContext = async () => {
     if (!selectedEnvSlug) return;
-    setLoading(true);
     try {
       const data = await apiFetch<ServiceContextView>(
         `/projects/${projectId}/services/${serviceSlug}/context?env=${selectedEnvSlug}`
@@ -71,48 +91,83 @@ export default function ServiceContextPage({
       }
     } catch {
       setContext(null);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadContext();
+    if (!selectedEnvSlug) return;
+    let mounted = true;
+    void (async () => {
+      try {
+        const data = await apiFetch<ServiceContextView>(
+          `/projects/${projectId}/services/${serviceSlug}/context?env=${selectedEnvSlug}`
+        );
+        if (mounted) {
+          setContext(data);
+          if (data?.environment?.id) {
+            const [resList, svcList] = await Promise.all([
+              apiFetch<ResourceEntity[]>(
+                `/projects/${projectId}/resources?env_id=${data.environment.id}`
+              ).catch(() => []),
+              apiFetch<ServiceEntity[]>(`/projects/${projectId}/services`).catch(() => []),
+            ]);
+            if (mounted) {
+              setAvailableResources(Array.isArray(resList) ? resList : []);
+              setAllServices(Array.isArray(svcList) ? svcList : []);
+            }
+          }
+        }
+      } catch {
+        if (mounted) setContext(null);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
   }, [projectId, serviceSlug, selectedEnvSlug]);
 
   const handleBindResource = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!context || !bindResourceId) return;
+    if (!bindResourceId) return;
     setActionError(null);
     setIsSubmitting(true);
     try {
+      const selectedResource = availableResources.find((r) => r.id === bindResourceId);
+      const currentEnv = environments.find((e) => e.slug === selectedEnvSlug);
+      const targetEnvId =
+        selectedResource?.environment_id ||
+        context?.environment?.id ||
+        currentEnv?.id;
+
       await apiFetch(`/projects/${projectId}/bindings`, {
         method: "POST",
         body: JSON.stringify({
-          service_id: context.service.id,
+          environment_id: targetEnvId,
+          service_id: context?.service?.id,
           resource_id: bindResourceId,
-          environment_id: context.environment.id,
           access_mode: bindAccessMode,
         }),
       });
       setShowBindModal(false);
       setBindResourceId("");
-      await loadContext();
+      await fetchContext();
     } catch (err) {
       const apiErr = err as ApiError;
-      setActionError(apiErr.detail || apiErr.title || "Failed to bind resource");
+      setActionError(apiErr.detail || apiErr.title || "Failed to bind infrastructure resource");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleRemoveBinding = async (bindingId: string) => {
-    if (!confirm("Are you sure you want to remove this resource binding?")) return;
+    if (!confirm("Are you sure you want to disconnect this resource binding?")) return;
     try {
       await apiFetch(`/projects/${projectId}/bindings/${bindingId}`, {
         method: "DELETE",
       });
-      await loadContext();
+      await fetchContext();
     } catch (err) {
       const apiErr = err as ApiError;
       alert(apiErr.detail || apiErr.title || "Failed to remove binding");
@@ -121,22 +176,22 @@ export default function ServiceContextPage({
 
   const handleAddDependency = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!context || !depCalleeId) return;
+    if (!depCalleeId) return;
     setActionError(null);
     setIsSubmitting(true);
     try {
       await apiFetch(`/projects/${projectId}/dependencies`, {
         method: "POST",
         body: JSON.stringify({
-          caller_service_id: context.service.id,
+          environment_id: context?.environment?.id,
+          caller_service_id: context?.service?.id,
           callee_service_id: depCalleeId,
-          environment_id: context.environment.id,
           protocol: depProtocol,
         }),
       });
       setShowDepModal(false);
       setDepCalleeId("");
-      await loadContext();
+      await fetchContext();
     } catch (err) {
       const apiErr = err as ApiError;
       setActionError(apiErr.detail || apiErr.title || "Failed to add service dependency");
@@ -145,41 +200,70 @@ export default function ServiceContextPage({
     }
   };
 
-  const otherServices = allServices.filter((s) => s.id !== context?.service.id);
-  const boundResourceIds = new Set((context?.bound_resources || []).map((b) => b.resource_id));
+  const otherServices = allServices.filter((s) => s.id !== context?.service?.id);
+  const boundResourceIds = new Set(
+    (context?.bound_resources || []).map((b) => b.resource_id || b.id || "")
+  );
   const unattachedResources = availableResources.filter((r) => !boundResourceIds.has(r.id));
+
+  const dependencies = [
+    ...(context?.upstream_dependencies || []).map((d) => ({
+      dependency_id: d.service_id,
+      service_id: d.service_id,
+      service_slug: d.service_slug,
+      service_name: d.service_name,
+      protocol: d.protocol,
+      direction: "UPSTREAM" as const,
+      created_at: new Date().toISOString(),
+    })),
+    ...(context?.downstream_dependencies || []).map((d) => ({
+      dependency_id: d.service_id,
+      service_id: d.service_id,
+      service_slug: d.service_slug,
+      service_name: d.service_name,
+      protocol: d.protocol,
+      direction: "DOWNSTREAM" as const,
+      created_at: new Date().toISOString(),
+    })),
+    ...(context?.dependencies || []),
+  ];
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center gap-2 text-xs text-slate-400">
-        <Link href={`/projects/${projectId}/services`} className="hover:text-slate-200">
-          Microservices
+        <Link
+          href={`/projects/${projectId}/services`}
+          className="hover:text-white transition-colors inline-flex items-center gap-1"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Microservices</span>
         </Link>
         <span>/</span>
-        <span className="text-slate-200 font-medium">{serviceSlug}</span>
+        <span className="text-slate-200 font-medium font-mono">{serviceSlug}</span>
       </div>
 
-      <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-white">
-              {context?.service?.name || serviceSlug}
+            <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
+              <Cpu className="w-6 h-6 text-indigo-400" />
+              <span>{context?.service?.name || serviceSlug}</span>
             </h1>
-            <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+            <Badge variant="outline" className="font-mono">
               {serviceSlug}
-            </span>
+            </Badge>
           </div>
           <p className="text-xs text-slate-400 mt-1">
             Single-Pane Service Context: runtime dependencies, ownership, and effective permissions.
           </p>
         </div>
 
-        <div className="flex items-center p-1 rounded-xl bg-slate-900 border border-slate-800">
+        <div className="flex items-center p-1 rounded-xl bg-slate-900 border border-slate-800 self-start md:self-auto overflow-x-auto">
           {environments.map((env) => (
             <button
               key={env.id}
               onClick={() => setSelectedEnvSlug(env.slug)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
                 selectedEnvSlug === env.slug
                   ? env.is_production
                     ? "bg-rose-600 text-white shadow-md shadow-rose-950"
@@ -199,13 +283,13 @@ export default function ServiceContextPage({
         </div>
       ) : !context ? (
         <div className="py-16 text-center text-xs text-slate-400">
-          Service context could not be resolved for stage "{selectedEnvSlug}".
+          Service context could not be resolved for stage &quot;{selectedEnvSlug}&quot;.
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card className="p-4">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block font-mono">
                 Owner Team
               </span>
               <div className="font-semibold text-white mt-1 text-sm">
@@ -214,10 +298,10 @@ export default function ServiceContextPage({
               <span className="text-xs text-slate-400 font-mono">
                 {context.owner_team?.slug}
               </span>
-            </div>
+            </Card>
 
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <Card className="p-4">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block font-mono">
                 Active Stage
               </span>
               <div className="flex items-center gap-2 mt-1">
@@ -225,357 +309,330 @@ export default function ServiceContextPage({
                   {context.environment?.name}
                 </span>
                 {context.environment?.is_production ? (
-                  <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] font-bold uppercase">
-                    PROD
-                  </span>
+                  <Badge variant="destructive">PROD</Badge>
                 ) : (
-                  <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 text-[10px] uppercase">
-                    Tier {context.environment?.tier_order}
-                  </span>
+                  <Badge variant="secondary">Tier {context.environment?.tier_order}</Badge>
                 )}
               </div>
-            </div>
+            </Card>
 
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                Your Effective RBAC Role
+            <Card className="p-4">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block font-mono">
+                Effective RBAC Role
               </span>
               <div className="mt-1">
-                <span className="px-2.5 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold text-xs">
+                <Badge variant="default" className="text-xs font-bold py-1">
                   {context.caller_effective_role || "VIEWER"}
-                </span>
+                </Badge>
               </div>
-            </div>
+            </Card>
 
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <Card className="p-4">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block font-mono">
                 Audit Checkpoint
               </span>
               <div className="mt-1 text-xs text-slate-300">
-                {context.last_activity ? (
+                {context.latest_audit_entry || context.last_activity ? (
                   <>
-                    <span className="font-mono text-indigo-400">
-                      {context.last_activity.action}
+                    <span className="font-mono text-indigo-400 font-medium">
+                      {(context.latest_audit_entry || context.last_activity)?.action}
                     </span>
-                    <span className="block text-[11px] text-slate-500 mt-0.5">
-                      {new Date(context.last_activity.timestamp).toLocaleString()}
+                    <span className="block text-[11px] text-slate-500 mt-0.5 font-mono">
+                      {new Date(
+                        (context.latest_audit_entry || context.last_activity)!.timestamp
+                      ).toLocaleString()}
                     </span>
                   </>
                 ) : (
                   <span className="text-slate-500">No recorded changes</span>
                 )}
               </div>
-            </div>
+            </Card>
           </div>
 
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800">
-            <div className="flex items-center justify-between mb-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-4">
               <div>
-                <h2 className="text-base font-bold text-white">
-                  Bound Infrastructure Dependencies ({context.bound_resources.length})
-                </h2>
-                <p className="text-xs text-slate-400">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Database className="w-4 h-4 text-indigo-400" />
+                  <span>Bound Infrastructure Dependencies ({context.bound_resources?.length || 0})</span>
+                </CardTitle>
+                <CardDescription>
                   Shared databases, caches, and streaming brokers bound in {context.environment.name}.
-                </p>
+                </CardDescription>
               </div>
-              <button
+              <Button
+                size="sm"
                 onClick={() => {
                   setActionError(null);
                   setShowBindModal(true);
                 }}
-                className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors"
+                className="gap-1.5"
               >
-                + Bind Resource
-              </button>
-            </div>
-
-            {context.bound_resources.length === 0 ? (
-              <div className="py-8 text-center text-xs text-slate-500 border border-dashed border-slate-800 rounded-xl">
-                No infrastructure resources bound to {context.service.name} in this stage.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-400">
-                      <th className="pb-3 font-semibold">Resource Name</th>
-                      <th className="pb-3 font-semibold">Type</th>
-                      <th className="pb-3 font-semibold">Access Mode</th>
-                      <th className="pb-3 font-semibold">Connection Metadata</th>
-                      <th className="pb-3 font-semibold text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60">
-                    {context.bound_resources.map((res) => (
-                      <tr key={res.binding_id} className="hover:bg-slate-800/30">
-                        <td className="py-3.5">
-                          <div className="font-medium text-white">{res.resource_name}</div>
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Bind Resource</span>
+              </Button>
+            </CardHeader>
+            <CardContent className="p-0">
+              {!context.bound_resources || context.bound_resources.length === 0 ? (
+                <div className="p-12 text-center text-xs text-slate-500">
+                  No infrastructure resources bound to {context.service.name} in this stage.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Resource Name</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Access Mode</TableHead>
+                      <TableHead>Connection Metadata</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(context.bound_resources || []).map((res) => (
+                      <TableRow key={res.binding_id}>
+                        <TableCell>
+                          <div className="font-semibold text-white">{res.resource_name || res.name}</div>
                           <span className="font-mono text-[11px] text-slate-400">
-                            {res.resource_slug}
+                            {res.resource_slug || res.slug}
                           </span>
-                        </td>
-                        <td className="py-3.5">
-                          <span className="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 font-mono text-[10px] text-slate-300">
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-mono text-[10px]">
                             {res.resource_type}
-                          </span>
-                        </td>
-                        <td className="py-3.5">
-                          <span
-                            className={`px-2 py-0.5 rounded-full font-bold text-[10px] uppercase ${
-                              res.access_mode === "READ_WRITE"
-                                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                                : "bg-slate-800 text-slate-400 border border-slate-700"
-                            }`}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={res.access_mode === "READ_WRITE" ? "success" : "secondary"}
                           >
                             {res.access_mode}
-                          </span>
-                        </td>
-                        <td className="py-3.5 font-mono text-[11px] text-slate-400 max-w-xs truncate">
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-mono text-[11px] text-slate-400 max-w-xs truncate">
                           {JSON.stringify(res.connection_metadata || {})}
-                        </td>
-                        <td className="py-3.5 text-right">
-                          <button
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => handleRemoveBinding(res.binding_id)}
-                            className="text-rose-400 hover:text-rose-300 font-semibold"
+                            className="text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 h-8"
                           >
-                            Unbind
-                          </button>
-                        </td>
-                      </tr>
+                            <Trash2 className="w-3.5 h-3.5 mr-1" />
+                            <span>Unbind</span>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
 
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800">
-            <div className="flex items-center justify-between mb-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-4">
               <div>
-                <h2 className="text-base font-bold text-white">
-                  Microservice Dependencies ({context.dependencies.length})
-                </h2>
-                <p className="text-xs text-slate-400">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Network className="w-4 h-4 text-indigo-400" />
+                  <span>Microservice Dependencies ({dependencies.length})</span>
+                </CardTitle>
+                <CardDescription>
                   Upstream callers and downstream RPC/HTTP/Event endpoints in {context.environment.name}.
-                </p>
+                </CardDescription>
               </div>
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => {
                   setActionError(null);
                   setShowDepModal(true);
                 }}
-                className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors"
+                className="gap-1.5"
               >
-                + Add Dependency
-              </button>
-            </div>
-
-            {context.dependencies.length === 0 ? (
-              <div className="py-8 text-center text-xs text-slate-500 border border-dashed border-slate-800 rounded-xl">
-                No upstream or downstream service dependencies mapped in this stage.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-400">
-                      <th className="pb-3 font-semibold">Direction</th>
-                      <th className="pb-3 font-semibold">Service Name</th>
-                      <th className="pb-3 font-semibold">Protocol</th>
-                      <th className="pb-3 font-semibold">Established</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60">
-                    {context.dependencies.map((dep) => (
-                      <tr key={dep.dependency_id} className="hover:bg-slate-800/30">
-                        <td className="py-3.5">
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] uppercase tracking-wider ${
-                              dep.direction === "UPSTREAM"
-                                ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
-                                : "bg-purple-500/20 text-purple-300 border border-purple-500/30"
-                            }`}
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Add Dependency</span>
+              </Button>
+            </CardHeader>
+            <CardContent className="p-0">
+              {dependencies.length === 0 ? (
+                <div className="p-12 text-center text-xs text-slate-500">
+                  No upstream or downstream service dependencies mapped in this stage.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Direction</TableHead>
+                      <TableHead>Service Name</TableHead>
+                      <TableHead>Protocol</TableHead>
+                      <TableHead className="text-right">Established</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dependencies.map((dep) => (
+                      <TableRow key={dep.dependency_id}>
+                        <TableCell>
+                          <Badge
+                            variant={dep.direction === "UPSTREAM" ? "info" : "default"}
+                            className="font-mono text-[10px]"
                           >
-                            {dep.direction === "UPSTREAM" ? "Caller &rarr; Us" : "Us &rarr; Callee"}
-                          </span>
-                        </td>
-                        <td className="py-3.5">
-                          <div className="font-medium text-white">{dep.service_name}</div>
+                            {dep.direction === "UPSTREAM" ? "Caller → Us" : "Us → Callee"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-semibold text-white">{dep.service_name}</div>
                           <span className="font-mono text-[11px] text-slate-400">
                             {dep.service_slug}
                           </span>
-                        </td>
-                        <td className="py-3.5">
-                          <span className="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 font-mono text-[10px] text-slate-300">
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-mono text-[10px]">
                             {dep.protocol}
-                          </span>
-                        </td>
-                        <td className="py-3.5 text-slate-500">
-                          {new Date(dep.created_at).toLocaleDateString()}
-                        </td>
-                      </tr>
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-slate-500 text-[11px] font-mono text-right">
+                          {dep.created_at ? new Date(dep.created_at).toLocaleDateString() : "—"}
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
 
-      {showBindModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-white mb-1">Bind Infrastructure Resource</h2>
-            <p className="text-xs text-slate-400 mb-4">
-              Bind {context?.service.name} to a resource provisioned in stage {context?.environment.name}.
-            </p>
+      <Dialog
+        open={showBindModal}
+        onOpenChange={setShowBindModal}
+        title="Bind Infrastructure Resource"
+        description={`Bind ${context?.service.name || "service"} to a resource provisioned in stage ${context?.environment.name || "stage"}.`}
+      >
+        {actionError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{actionError}</AlertDescription>
+          </Alert>
+        )}
 
-            {actionError && (
-              <div className="mb-4 p-3 rounded-lg bg-rose-950/50 border border-rose-800 text-rose-200 text-xs">
-                {actionError}
-              </div>
-            )}
-
-            <form onSubmit={handleBindResource} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Resource</label>
-                <select
-                  required
-                  value={bindResourceId}
-                  onChange={(e) => setBindResourceId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                >
-                  <option value="">Select an infrastructure resource...</option>
-                  {unattachedResources.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name} ({r.slug} - {r.resource_type})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Access Mode
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setBindAccessMode("READ_WRITE")}
-                    className={`py-2 px-3 rounded-lg border text-xs font-semibold transition-colors ${
-                      bindAccessMode === "READ_WRITE"
-                        ? "bg-indigo-600/30 border-indigo-500 text-indigo-200"
-                        : "bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200"
-                    }`}
-                  >
-                    Read & Write
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setBindAccessMode("READ")}
-                    className={`py-2 px-3 rounded-lg border text-xs font-semibold transition-colors ${
-                      bindAccessMode === "READ"
-                        ? "bg-indigo-600/30 border-indigo-500 text-indigo-200"
-                        : "bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200"
-                    }`}
-                  >
-                    Read-Only
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowBindModal(false)}
-                  className="px-3 py-2 text-xs text-slate-400 hover:text-slate-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !bindResourceId}
-                  className="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50"
-                >
-                  {isSubmitting ? "Binding..." : "Confirm Binding"}
-                </button>
-              </div>
-            </form>
+        <form onSubmit={handleBindResource} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="bind-resource">Select Resource</Label>
+            <Select
+              id="bind-resource"
+              required
+              value={bindResourceId}
+              onChange={(e) => setBindResourceId(e.target.value)}
+            >
+              <option value="">Select an infrastructure resource...</option>
+              {unattachedResources.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name} ({r.slug} - {r.resource_type})
+                </option>
+              ))}
+            </Select>
           </div>
-        </div>
-      )}
 
-      {showDepModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-white mb-1">Add Downstream Callee Dependency</h2>
-            <p className="text-xs text-slate-400 mb-4">
-              Declare that {context?.service.name} calls another microservice in stage {context?.environment.name}.
-            </p>
-
-            {actionError && (
-              <div className="mb-4 p-3 rounded-lg bg-rose-950/50 border border-rose-800 text-rose-200 text-xs">
-                {actionError}
-              </div>
-            )}
-
-            <form onSubmit={handleAddDependency} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Target Service (Callee)
-                </label>
-                <select
-                  required
-                  value={depCalleeId}
-                  onChange={(e) => setDepCalleeId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                >
-                  <option value="">Select callee microservice...</option>
-                  {otherServices.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.slug})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Protocol</label>
-                <select
-                  value={depProtocol}
-                  onChange={(e) =>
-                    setDepProtocol(e.target.value as "HTTP" | "GRPC" | "KAFKA" | "EVENT")
-                  }
-                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
-                >
-                  <option value="HTTP">HTTP / REST</option>
-                  <option value="GRPC">gRPC</option>
-                  <option value="KAFKA">Kafka / Message Queue</option>
-                  <option value="EVENT">Webhook / Event</option>
-                </select>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowDepModal(false)}
-                  className="px-3 py-2 text-xs text-slate-400 hover:text-slate-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !depCalleeId}
-                  className="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50"
-                >
-                  {isSubmitting ? "Linking..." : "Establish Dependency"}
-                </button>
-              </div>
-            </form>
+          <div className="space-y-1.5">
+            <Label htmlFor="bind-access">Access Mode</Label>
+            <Select
+              id="bind-access"
+              value={bindAccessMode}
+              onChange={(e) => setBindAccessMode(e.target.value as "READ_WRITE" | "READ")}
+            >
+              <option value="READ_WRITE">Read & Write</option>
+              <option value="READ">Read-Only</option>
+            </Select>
           </div>
-        </div>
-      )}
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowBindModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting || !bindResourceId}
+              size="sm"
+            >
+              {isSubmitting ? "Binding..." : "Confirm Binding"}
+            </Button>
+          </div>
+        </form>
+      </Dialog>
+
+      <Dialog
+        open={showDepModal}
+        onOpenChange={setShowDepModal}
+        title="Add Downstream Callee Dependency"
+        description={`Declare that ${context?.service.name || "service"} calls another microservice in stage ${context?.environment.name || "stage"}.`}
+      >
+        {actionError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{actionError}</AlertDescription>
+          </Alert>
+        )}
+
+        <form onSubmit={handleAddDependency} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="dep-callee">Target Microservice</Label>
+            <Select
+              id="dep-callee"
+              required
+              value={depCalleeId}
+              onChange={(e) => setDepCalleeId(e.target.value)}
+            >
+              <option value="">Choose downstream service...</option>
+              {otherServices.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} ({s.slug})
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="dep-protocol">Communication Protocol</Label>
+            <Select
+              id="dep-protocol"
+              value={depProtocol}
+              onChange={(e) =>
+                setDepProtocol(e.target.value as "HTTP" | "GRPC" | "KAFKA" | "EVENT")
+              }
+            >
+              <option value="HTTP">HTTP/REST</option>
+              <option value="GRPC">gRPC / Protocol Buffers</option>
+              <option value="KAFKA">Kafka Event Bus</option>
+              <option value="EVENT">Async Event</option>
+            </Select>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDepModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting || !depCalleeId}
+              size="sm"
+            >
+              {isSubmitting ? "Mapping..." : "Add Dependency"}
+            </Button>
+          </div>
+        </form>
+      </Dialog>
     </div>
   );
 }
