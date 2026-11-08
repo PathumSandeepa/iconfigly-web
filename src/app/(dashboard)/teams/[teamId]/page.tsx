@@ -118,7 +118,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ teamId: s
       <div className="flex items-center gap-2">
         <Link
           href="/teams"
-          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to Teams</span>
@@ -127,11 +127,11 @@ export default function TeamDetailPage({ params }: { params: Promise<{ teamId: s
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
-            <Users className="w-6 h-6 text-indigo-400" />
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-2.5">
+            <Users className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
             <span>{details?.team?.name || "Payments Team"}</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1 font-mono">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 font-mono">
             Team Roster &bull; {details?.team?.description || "Squad ownership"}
           </p>
         </div>
@@ -145,12 +145,12 @@ export default function TeamDetailPage({ params }: { params: Promise<{ teamId: s
         </Button>
       </div>
 
-      <Card>
+      <Card className="rounded-3xl overflow-hidden">
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-12 text-center text-xs text-slate-500">Loading roster...</div>
+            <div className="p-12 text-center text-xs text-zinc-500">Loading roster...</div>
           ) : !details || details.members.length === 0 ? (
-            <div className="p-12 text-center text-xs text-slate-500">
+            <div className="p-12 text-center text-xs text-zinc-500">
               No members assigned to this squad yet. Click &quot;+ Add Member&quot; to assign engineers.
             </div>
           ) : (
@@ -167,10 +167,10 @@ export default function TeamDetailPage({ params }: { params: Promise<{ teamId: s
               <TableBody>
                 {details.members.map((member) => (
                   <TableRow key={member.id}>
-                    <TableCell className="font-semibold text-white">
+                    <TableCell className="font-semibold text-zinc-900 dark:text-white">
                       {member.user_full_name}
                     </TableCell>
-                    <TableCell className="text-slate-300 font-mono text-[11px]">
+                    <TableCell className="text-zinc-600 dark:text-zinc-300 font-mono text-[11px]">
                       {member.user_email}
                     </TableCell>
                     <TableCell>
@@ -183,7 +183,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ teamId: s
                         <Badge variant="secondary">MEMBER</Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-slate-500 text-[11px] font-mono">
+                    <TableCell className="text-zinc-500 text-[11px] font-mono">
                       {new Date(member.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right">
@@ -191,7 +191,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ teamId: s
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRemoveMember(member.user_id)}
-                        className="text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 h-8 px-2"
+                        className="text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 h-8 px-2"
                       >
                         <Trash2 className="w-3.5 h-3.5 mr-1" />
                         <span>Remove</span>
@@ -247,7 +247,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ teamId: s
             </Select>
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
             <Button
               type="button"
               variant="ghost"

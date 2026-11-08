@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 
@@ -9,9 +9,11 @@ export default function RootPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function determineInitialRoute() {
+    let mounted = true;
+    void (async () => {
       try {
-        const setup = await apiFetch<{ initialized: boolean }>("/auth/setup-status");
+        const setup = await apiFetch<{ initialized: boolean }>("/setup/status");
+        if (!mounted) return;
         if (!setup.initialized) {
           router.replace("/setup");
           return;
@@ -19,26 +21,36 @@ export default function RootPage() {
 
         try {
           await apiFetch("/auth/me");
-          router.replace("/dashboard");
+          if (mounted) {
+            router.replace("/dashboard");
+          }
         } catch {
-          router.replace("/login");
+          if (mounted) {
+            router.replace("/login");
+          }
         }
       } catch {
-        router.replace("/login");
+        if (mounted) {
+          router.replace("/login");
+        }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
-    }
+    })();
 
-    determineInitialRoute();
+    return () => {
+      mounted = false;
+    };
   }, [router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-100">
+    <div className="min-h-screen flex items-center justify-center bg-[#f8f9fa] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
       {loading && (
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-slate-400">Loading iconfigly...</p>
+          <div className="w-8 h-8 border-3 border-zinc-900 dark:border-white border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">Loading iconfigly...</p>
         </div>
       )}
     </div>

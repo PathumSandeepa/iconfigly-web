@@ -199,23 +199,23 @@ export default function AccessPage({
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
-            <ShieldCheck className="w-6 h-6 text-indigo-400" />
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-2.5">
+            <ShieldCheck className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
             <span>Scoped Access Control (RBAC)</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
             Hierarchical authorization matrix and &quot;Who Has Access?&quot; audit inspector.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center p-1 rounded-xl bg-slate-900 border border-slate-800">
+          <div className="flex items-center p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
             <button
               onClick={() => setActiveTab("BINDINGS")}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === "BINDINGS"
-                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-950"
-                  : "text-slate-400 hover:text-slate-200"
+                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-xs"
+                  : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
               }`}
             >
               Role Bindings
@@ -224,8 +224,8 @@ export default function AccessPage({
               onClick={() => setActiveTab("INSPECT")}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === "INSPECT"
-                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-950"
-                  : "text-slate-400 hover:text-slate-200"
+                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-xs"
+                  : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
               }`}
             >
               Who Has Access?
@@ -248,12 +248,12 @@ export default function AccessPage({
       </div>
 
       {activeTab === "BINDINGS" ? (
-        <Card>
+        <Card className="rounded-3xl overflow-hidden">
           <CardContent className="p-0">
             {loading ? (
-              <div className="p-12 text-center text-xs text-slate-500">Loading role bindings...</div>
+              <div className="p-12 text-center text-xs text-zinc-500">Loading role bindings...</div>
             ) : bindings.length === 0 ? (
-              <div className="p-12 text-center text-xs text-slate-500">
+              <div className="p-12 text-center text-xs text-zinc-500">
                 No custom role bindings assigned in this project hierarchy yet.
               </div>
             ) : (
@@ -277,7 +277,7 @@ export default function AccessPage({
 
                     return (
                       <TableRow key={b.id}>
-                        <TableCell className="font-semibold text-white">{subjectName}</TableCell>
+                        <TableCell className="font-semibold text-zinc-900 dark:text-white">{subjectName}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className="font-mono text-[10px]">
                             {b.subject_type}
@@ -288,10 +288,10 @@ export default function AccessPage({
                             {b.role_name}
                           </Badge>
                         </TableCell>
-                        <TableCell className="font-mono text-[11px] text-slate-400">
+                        <TableCell className="font-mono text-[11px] text-zinc-500">
                           {b.scope_type}
                         </TableCell>
-                        <TableCell className="text-slate-500 text-[11px] font-mono">
+                        <TableCell className="text-zinc-500 text-[11px] font-mono">
                           {b.expires_at ? new Date(b.expires_at).toLocaleDateString() : "Never"}
                         </TableCell>
                         <TableCell className="text-right">
@@ -299,7 +299,7 @@ export default function AccessPage({
                             variant="ghost"
                             size="sm"
                             onClick={() => handleRevoke(b.id)}
-                            className="text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 h-8"
+                            className="text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 h-8"
                           >
                             <Trash2 className="w-3.5 h-3.5 mr-1" />
                             <span>Revoke</span>
@@ -315,13 +315,13 @@ export default function AccessPage({
         </Card>
       ) : (
         <div className="space-y-6">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xs font-bold text-white uppercase tracking-wider">
+          <Card className="rounded-3xl">
+            <CardHeader className="p-6 pb-3">
+              <CardTitle className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-mono">
                 Inspect Scope Target
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-6 pt-0">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="inspect-level">Scope Level</Label>
@@ -350,7 +350,7 @@ export default function AccessPage({
                 <div className="space-y-1.5">
                   <Label htmlFor="inspect-target">Select Target Aggregate</Label>
                   {inspectScopeType === "PROJECT" ? (
-                    <div className="flex h-9 w-full rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2 text-xs text-slate-300 items-center">
+                    <div className="flex h-10 w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 px-3.5 py-2 text-xs text-zinc-700 dark:text-zinc-300 items-center font-sans">
                       Active Project Scope
                     </div>
                   ) : inspectScopeType === "ENVIRONMENT" ? (
@@ -395,11 +395,11 @@ export default function AccessPage({
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <Card className="rounded-3xl overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between p-6 pb-4">
               <div>
-                <CardTitle className="text-sm font-bold text-white">Effective Access Matrix</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-base font-bold text-zinc-900 dark:text-white">Effective Access Matrix</CardTitle>
+                <CardDescription className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                   Deny-by-default algorithm evaluated up the ancestor hierarchy.
                 </CardDescription>
               </div>
@@ -407,7 +407,7 @@ export default function AccessPage({
                 variant="outline"
                 size="sm"
                 onClick={loadInspection}
-                className="gap-1.5 text-indigo-400 hover:text-indigo-300"
+                className="gap-1.5"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span>Refresh Inspector</span>
@@ -415,11 +415,11 @@ export default function AccessPage({
             </CardHeader>
             <CardContent className="p-0">
               {inspectLoading ? (
-                <div className="p-12 text-center text-xs text-slate-500">
+                <div className="p-12 text-center text-xs text-zinc-500">
                   Evaluating RBAC hierarchy...
                 </div>
               ) : effectivePermissions.length === 0 ? (
-                <div className="p-12 text-center text-xs text-slate-500">
+                <div className="p-12 text-center text-xs text-zinc-500">
                   No users or teams have explicit or inherited access to this target scope.
                 </div>
               ) : (
@@ -435,7 +435,7 @@ export default function AccessPage({
                   <TableBody>
                     {effectivePermissions.map((ep, idx) => (
                       <TableRow key={idx}>
-                        <TableCell className="font-semibold text-white">
+                        <TableCell className="font-semibold text-zinc-900 dark:text-white">
                           {ep.subject_name || ep.subject_id}
                         </TableCell>
                         <TableCell>
@@ -600,7 +600,7 @@ export default function AccessPage({
             </div>
           )}
 
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
             <Button
               type="button"
               variant="ghost"

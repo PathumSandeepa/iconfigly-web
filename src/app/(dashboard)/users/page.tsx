@@ -108,11 +108,11 @@ export default function UsersPage() {
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
-            <UserCheck className="w-6 h-6 text-indigo-400" />
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-2.5">
+            <UserCheck className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
             <span>User Directory</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
             Manage organization members, platform roles, and credential lifecycle.
           </p>
         </div>
@@ -126,12 +126,12 @@ export default function UsersPage() {
         </Button>
       </div>
 
-      <Card>
+      <Card className="rounded-3xl overflow-hidden">
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-12 text-center text-xs text-slate-500">Loading user directory...</div>
+            <div className="p-12 text-center text-xs text-zinc-500">Loading user directory...</div>
           ) : users.length === 0 ? (
-            <div className="p-12 text-center text-xs text-slate-500">
+            <div className="p-12 text-center text-xs text-zinc-500">
               No users found. Click &quot;+ Add User&quot; to provision developer accounts.
             </div>
           ) : (
@@ -149,10 +149,10 @@ export default function UsersPage() {
               <TableBody>
                 {users.map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell className="font-semibold text-white">
+                    <TableCell className="font-semibold text-zinc-900 dark:text-white">
                       {user.full_name}
                     </TableCell>
-                    <TableCell className="font-mono text-slate-300 text-[11px]">
+                    <TableCell className="font-mono text-zinc-600 dark:text-zinc-300 text-[11px]">
                       {user.email}
                     </TableCell>
                     <TableCell>
@@ -172,7 +172,7 @@ export default function UsersPage() {
                         <Badge variant="destructive">Disabled</Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-slate-500 text-[11px] font-mono">
+                    <TableCell className="text-zinc-500 text-[11px] font-mono">
                       {new Date(user.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right">
@@ -183,8 +183,8 @@ export default function UsersPage() {
                           onClick={() => handleToggleStatus(user)}
                           className={
                             user.status === "ACTIVE"
-                              ? "text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 h-8"
-                              : "text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/40 h-8"
+                              ? "text-rose-600 dark:text-rose-400 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 h-8"
+                              : "text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 h-8"
                           }
                         >
                           <Power className="w-3.5 h-3.5 mr-1" />
@@ -245,11 +245,11 @@ export default function UsersPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder={"\u2022".repeat(12)}
+              placeholder="••••••••••••"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
             <Button
               type="button"
               variant="ghost"

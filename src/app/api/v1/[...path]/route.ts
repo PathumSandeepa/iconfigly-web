@@ -23,10 +23,22 @@ async function proxyRequest(
     }
   });
 
+  const isAuthEntry = targetPath === "auth/login" || targetPath === "auth/setup";
   const cookieHeader = req.headers.get("cookie");
   if (cookieHeader) {
-    forwardHeaders.set("cookie", cookieHeader);
-  } else {
+    if (isAuthEntry) {
+      const filtered = cookieHeader
+        .split(";")
+        .map((c) => c.trim())
+        .filter((c) => !c.startsWith("iconfigly_session="))
+        .join("; ");
+      if (filtered) {
+        forwardHeaders.set("cookie", filtered);
+      }
+    } else {
+      forwardHeaders.set("cookie", cookieHeader);
+    }
+  } else if (!isAuthEntry) {
     const allCookies = req.cookies.getAll();
     if (allCookies.length > 0) {
       forwardHeaders.set(

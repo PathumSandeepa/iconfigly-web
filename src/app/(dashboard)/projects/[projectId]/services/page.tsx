@@ -121,11 +121,11 @@ export default function ServicesPage({
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
-            <Cpu className="w-6 h-6 text-indigo-400" />
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-2.5">
+            <Cpu className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
             <span>Microservice Catalog</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
             Service inventory, squad ownership, and runtime dependency graph.
           </p>
         </div>
@@ -141,23 +141,23 @@ export default function ServicesPage({
 
       <div className="flex items-center gap-3">
         <div className="relative w-80">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
           <Input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search microservices by name or slug..."
-            className="pl-9 font-sans"
+            className="pl-9 font-sans h-10 rounded-xl"
           />
         </div>
       </div>
 
-      <Card>
+      <Card className="rounded-3xl overflow-hidden">
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-12 text-center text-xs text-slate-500">Loading catalog...</div>
+            <div className="p-12 text-center text-xs text-zinc-500">Loading catalog...</div>
           ) : filteredServices.length === 0 ? (
-            <div className="p-12 text-center text-xs text-slate-500">
+            <div className="p-12 text-center text-xs text-zinc-500">
               No microservices registered yet. Click &quot;+ Register Service&quot; to catalog applications.
             </div>
           ) : (
@@ -175,7 +175,7 @@ export default function ServicesPage({
               <TableBody>
                 {filteredServices.map((service) => (
                   <TableRow key={service.id}>
-                    <TableCell className="font-semibold text-white">
+                    <TableCell className="font-semibold text-zinc-900 dark:text-white">
                       {service.name}
                     </TableCell>
                     <TableCell>
@@ -189,16 +189,16 @@ export default function ServicesPage({
                         <span>{teamMap.get(service.owner_team_id) || "Squad Unassigned"}</span>
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-slate-400 max-w-xs truncate">
+                    <TableCell className="text-zinc-500 dark:text-zinc-400 max-w-xs truncate">
                       {service.description || "—"}
                     </TableCell>
-                    <TableCell className="text-slate-500 text-[11px] font-mono">
+                    <TableCell className="text-zinc-500 text-[11px] font-mono">
                       {new Date(service.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right">
                       <Link
                         href={`/projects/${projectId}/services/${service.slug}`}
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-zinc-900 dark:text-white hover:underline underline-offset-4 transition-colors"
                       >
                         <span>Single-Pane Context</span>
                         <ArrowUpRight className="w-3.5 h-3.5" />
@@ -275,11 +275,11 @@ export default function ServicesPage({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Handles credit cards, wire transfers, and fraud analysis"
-              className="flex w-full rounded-xl border border-slate-800 bg-slate-900/90 px-3 py-2 text-xs text-white shadow-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 font-sans"
+              className="flex w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/90 px-3 py-2 text-xs text-zinc-900 dark:text-white shadow-xs placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-900 focus-visible:border-zinc-900 font-sans"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
             <Button
               type="button"
               variant="ghost"

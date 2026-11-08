@@ -2,13 +2,23 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Sparkles } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import {
+  Building2,
+  User,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  ArrowRight,
+} from "lucide-react";
 
 export default function SetupPage() {
   const router = useRouter();
@@ -17,6 +27,7 @@ export default function SetupPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -63,101 +74,183 @@ export default function SetupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
-      <Card className="w-full max-w-md border-slate-800 bg-slate-900/90 shadow-2xl">
-        <CardHeader className="space-y-3 pb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-950/60">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <CardTitle className="text-xl">iconfigly</CardTitle>
-              <CardDescription>First-Run Platform Initialization</CardDescription>
-            </div>
+    <div className="min-h-screen flex flex-col justify-between bg-[#f8f9fa] dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 transition-colors p-6">
+      <header className="flex items-center justify-between max-w-5xl w-full mx-auto">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-white dark:text-zinc-900 shadow-xs">
+            <svg
+              className="w-5 h-5 fill-current"
+              viewBox="0 0 24 24"
+            >
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" />
+            </svg>
           </div>
-          <h1 className="text-base font-bold text-white tracking-tight">First-Run Platform Setup</h1>
-        </CardHeader>
+          <div>
+            <span className="font-bold text-base tracking-tight text-zinc-900 dark:text-white">
+              iconfigly
+            </span>
+            <span className="block text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
+              Cluster Initialization
+            </span>
+          </div>
+        </div>
 
-        <CardContent>
+        <ThemeToggle />
+      </header>
+
+      <main className="flex items-center justify-center py-10 w-full max-w-5xl mx-auto">
+        <div className="w-full max-w-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 transition-colors">
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
+              Bootstrap Organization
+            </h1>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
+              Create the root tenant and provision the first super admin account.
+            </p>
+          </div>
+
           {error && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertDescription>{error}</AlertDescription>
+            <Alert variant="destructive" className="mb-6 rounded-xl">
+              <AlertCircle className="w-4 h-4" />
+              <AlertDescription className="text-xs">{error}</AlertDescription>
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="org-name">Organization Name</Label>
-              <Input
-                id="org-name"
-                type="text"
-                required
-                value={orgName}
-                onChange={handleNameChange}
-                placeholder="Acme Cloud Corp"
-              />
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
+              <span className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">
+                Organization Details
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="orgName" className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                    Organization Name
+                  </Label>
+                  <div className="relative">
+                    <Building2 className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                    <Input
+                      id="orgName"
+                      required
+                      value={orgName}
+                      onChange={handleNameChange}
+                      placeholder="Acme Cloud Corp"
+                      className="pl-10 h-10 rounded-xl"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="orgSlug" className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                    Organization Slug
+                  </Label>
+                  <Input
+                    id="orgSlug"
+                    required
+                    value={orgSlug}
+                    onChange={(e) => setOrgSlug(e.target.value)}
+                    placeholder="acme-cloud"
+                    className="h-10 rounded-xl font-mono"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="org-slug">Organization Slug</Label>
-              <Input
-                id="org-slug"
-                type="text"
-                required
-                value={orgSlug}
-                onChange={(e) => setOrgSlug(e.target.value)}
-                placeholder="acme-cloud"
-                className="font-mono"
-              />
-            </div>
+            <div className="space-y-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+              <span className="block text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">
+                Super Admin Account
+              </span>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="fullName" className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                    Full Name
+                  </Label>
+                  <div className="relative">
+                    <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                    <Input
+                      id="fullName"
+                      required
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Jane Doe"
+                      className="pl-10 h-10 rounded-xl"
+                    />
+                  </div>
+                </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="full-name">Superadmin Full Name</Label>
-              <Input
-                id="full-name"
-                type="text"
-                required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Jane Doe"
-              />
-            </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email" className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                      Work Email
+                    </Label>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                      <Input
+                        id="email"
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="admin@example.com"
+                        className="pl-10 h-10 rounded-xl"
+                      />
+                    </div>
+                  </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="admin-email">Superadmin Email</Label>
-              <Input
-                id="admin-email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@example.com"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="admin-password">Master Password</Label>
-              <Input
-                id="admin-password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={"\u2022".repeat(12)}
-              />
+                  <div className="space-y-1.5">
+                    <Label htmlFor="password" className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                      Password
+                    </Label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••••••"
+                        className="pl-10 pr-10 h-10 rounded-xl font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="w-full mt-2 h-11"
-              size="lg"
+              className="w-full h-11 rounded-xl bg-zinc-900 text-white hover:bg-black dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 font-medium text-xs transition-colors mt-2"
             >
-              {isSubmitting ? "Initializing Control Plane..." : "Initialize Organization"}
+              {isSubmitting ? "Initializing..." : "Initialize Organization"}
+              <ArrowRight className="w-4 h-4 ml-1" />
             </Button>
           </form>
-        </CardContent>
-      </Card>
+
+          <div className="mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800 text-center">
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              Already initialized?{" "}
+            </span>
+            <Link
+              href="/login"
+              className="text-xs font-semibold text-zinc-900 dark:text-white hover:underline underline-offset-4"
+            >
+              Sign In &rarr;
+            </Link>
+          </div>
+        </div>
+      </main>
+
+      <footer className="text-center text-xs text-zinc-400 dark:text-zinc-600 font-mono py-2">
+        iconfigly &bull; phase 1 developer control plane
+      </footer>
     </div>
   );
 }
