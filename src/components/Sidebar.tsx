@@ -22,6 +22,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { currentProject } = useAuth();
   const projId = currentProject?.id;
+  const appVersion = (process.env.NEXT_PUBLIC_APP_VERSION || "1.0.0").replace(/^v/, "");
 
   const globalLinks = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -141,7 +142,7 @@ export function Sidebar() {
       </div>
 
       <div className="pt-4 border-t border-zinc-800 px-2 text-[10px] text-zinc-500 flex items-center justify-between font-mono">
-        <span>iconfigly v1.0</span>
+        <span>iconfigly v{appVersion}</span>
         <span className="flex items-center gap-1.5">
           <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
           <span className="text-emerald-400 text-[10px]">online</span>
